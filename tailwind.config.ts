@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss"
 
-const config = {
-  darkMode: "class",
+const config: Config = {
+  darkMode: ["class"],
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -52,6 +52,28 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        brand: {
+          black: "#000000",
+          "gray-900": "#0a0a0a",
+          "gray-800": "#1a1a1a", 
+          "gray-700": "#2a2a2a",
+          "gray-600": "#3a3a3a",
+          "gray-500": "#4a4a4a",
+          "neon-green": "#39FF14",
+          "neon-green-dark": "#2EFF0F",
+          "neon-green-light": "#5FFF3E",
+        },
+        'brand-black': '#0D0D0D',
+        'brand-gray-900': '#1A1A1A',
+        'brand-gray-800': '#2C2C2C',
+        'brand-gray-700': '#3D3D3D',
+        'brand-gray-600': '#4E4E4E',
+        'brand-gray-500': '#808080',
+        'brand-gray-400': '#A9A9A9',
+        'brand-gray-300': '#D0D0D0',
+        'brand-neon-green': '#39FF14',
+        'brand-neon-green-dark': '#2EFF0F',
+        'brand-neon-green-light': '#5FFF3E',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -67,14 +89,41 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "glow": {
+          "0%, 100%": { 
+            boxShadow: "0 0 20px rgba(57, 255, 20, 0.5), 0 0 40px rgba(57, 255, 20, 0.3), 0 0 60px rgba(57, 255, 20, 0.1)" 
+          },
+          "50%": { 
+            boxShadow: "0 0 30px rgba(57, 255, 20, 0.8), 0 0 60px rgba(57, 255, 20, 0.5), 0 0 90px rgba(57, 255, 20, 0.2)" 
+          },
+        },
+        "pulse-neon": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "glow": "glow 2s ease-in-out infinite alternate",
+        "pulse-neon": "pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
+      },
+      fontSize: {
+        "2xs": ["0.625rem", { lineHeight: "0.75rem" }],
+      },
+      backdropBlur: {
+        xs: "2px",
+      },
+      transitionTimingFunction: {
+        'out-cubic': 'cubic-bezier(0.33, 1, 0.68, 1)',
       },
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config
+}
 
 export default config 
