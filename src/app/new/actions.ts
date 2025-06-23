@@ -19,7 +19,7 @@ import {
  */
 export async function uploadFile(formData: FormData) {
   console.log("\n--- [ACTION START: uploadFile] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -69,7 +69,7 @@ export async function uploadFile(formData: FormData) {
  * Busca as configurações do usuário para usar como padrões
  */
 export async function getUserDefaults() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -111,7 +111,7 @@ export async function getUserDefaults() {
  */
 export async function saveDraft(formData: CreateCreativeData) {
   console.log("\n--- [ACTION START: saveDraft] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -164,7 +164,7 @@ export async function saveDraft(formData: CreateCreativeData) {
  */
 export async function createCreative(formData: CreateCreativeData) {
   console.log("\n--- [ACTION START: createCreative] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -254,7 +254,7 @@ export async function createCreative(formData: CreateCreativeData) {
  */
 export async function updateCreative(creativeId: string, formData: Partial<CreateCreativeData>) {
   console.log("\n--- [ACTION START: updateCreative] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -321,7 +321,7 @@ export async function getUserCreatives(filters: {
   limit?: number;
   offset?: number;
 } = {}) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -376,7 +376,7 @@ export async function getUserCreatives(filters: {
  */
 export async function deleteCreative(creativeId: string) {
   console.log("\n--- [ACTION START: deleteCreative] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -434,7 +434,7 @@ export async function deleteCreative(creativeId: string) {
  */
 export async function reprocessCreative(creativeId: string) {
   console.log("\n--- [ACTION START: reprocessCreative] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -487,7 +487,7 @@ export async function reprocessCreative(creativeId: string) {
  * Função de debug para verificar autenticação
  */
 export async function debugAuth() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Verifica o usuário pelo getUser
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -508,7 +508,7 @@ export async function debugAuth() {
 export async function triggerQueueProcessing() {
   console.log("\n--- [ACTION START: triggerQueueProcessing] ---");
   
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -555,7 +555,7 @@ export async function triggerQueueProcessing() {
  */
 export async function createCreativeRequest(formData: CreateCreativeRequestData) {
   console.log("\n--- [🚀 ACTION START: createCreativeRequest] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -705,7 +705,7 @@ export async function createCreativeRequest(formData: CreateCreativeRequestData)
  */
 async function rollbackCreativeRequest(requestId: string, createdCreatives: any[]) {
   console.log(`Rolling back creative request ${requestId}...`);
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Remove todos os queue_jobs dos criativos criados
   for (const creative of createdCreatives) {
@@ -738,7 +738,7 @@ export async function getUserCreativeRequests(filters: {
   limit?: number;
   offset?: number;
 } = {}) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -797,7 +797,7 @@ export async function getUserCreativeRequests(filters: {
  * ✨ NOVA: Atualiza o status de um creative_request baseado nos status dos creatives filhos
  */
 export async function updateCreativeRequestStatus(requestId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Busca todos os criativos relacionados ao request
   const { data: creatives, error } = await supabase
@@ -848,7 +848,7 @@ export async function updateCreativeRequestStatus(requestId: string) {
  */
 export async function reprocessCreativeRequest(requestId: string) {
   console.log("\n--- [🚀 ACTION START: reprocessCreativeRequest] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -901,7 +901,7 @@ export async function reprocessCreativeRequest(requestId: string) {
  */
 export async function deleteCreativeRequest(requestId: string) {
   console.log("\n--- [🚀 ACTION START: deleteCreativeRequest] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

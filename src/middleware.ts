@@ -9,7 +9,12 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Permite acesso à página inicial (/) e rotas de auth sem redirecionamento
+  // Se o usuário estiver logado e tentar acessar a página inicial, redirecione para a galeria
+  if (user && request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/gallery', request.url))
+  }
+
+  // Se o usuário não estiver logado e tentar acessar uma rota protegida, redirecione para a página inicial
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/auth') &&
@@ -28,9 +33,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - auth routes (login, callback, signup)
-     * - root path (/) which now shows login directly
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 } 

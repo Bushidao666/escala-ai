@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { AnimatedBackground } from '@/components/ui/animated-background';
+import { headers } from 'next/headers';
 
 const inter = Inter({ 
   subsets: ["latin"], 
@@ -52,8 +53,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
+  const headerStore = await headers();
+  const pathname = headerStore.get('next-url') || '';
+
+  const showSidebar = !!session && pathname !== '/';
 
   return (
     <html lang="pt-BR" className="dark" suppressHydrationWarning>
@@ -70,7 +75,7 @@ export default async function RootLayout({
       >
         <div className="relative flex min-h-screen">
           <AnimatedBackground />
-          {session ? (
+          {showSidebar ? (
             <>
               <Sidebar />
               <main className="flex-1 overflow-auto">

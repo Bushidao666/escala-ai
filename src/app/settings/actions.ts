@@ -6,7 +6,7 @@ import OpenAI from 'openai';
 import { settingsSchema, type SettingsFormData, defaultSettings } from "@/lib/schemas/settings";
 
 export async function getUserSettings() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -30,7 +30,7 @@ export async function getUserSettings() {
 
 export async function saveSettings(settingsData: SettingsFormData) {
   console.log("\n--- [ACTION START: saveSettings] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -93,7 +93,7 @@ export async function saveSettings(settingsData: SettingsFormData) {
 
 export async function restoreDefaults() {
   console.log("\n--- [ACTION START: restoreDefaults] ---");
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

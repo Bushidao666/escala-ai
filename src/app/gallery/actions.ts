@@ -8,7 +8,7 @@ import { galleryFiltersSchema, type GalleryFilters } from "./gallery.types";
  * Retorna uma lista unificada e ordenada de ambos os tipos de dados.
  */
 export async function getCreativesForGallery(filters: GalleryFilters) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
