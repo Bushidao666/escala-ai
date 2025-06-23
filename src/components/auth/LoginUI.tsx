@@ -6,13 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, Mail, Lock, Eye, EyeOff, Sparkles, Zap } from "lucide-react";
+import { Flame, Mail, Lock, Eye, EyeOff, Sparkles, Zap, AlertCircle, CheckCircle } from "lucide-react";
 import { signInWithPassword, signInWithOtp } from "@/app/auth/actions"; // Caminho ajustado para ser absoluto
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+interface LoginUIProps {
+  message?: string;
+}
+
 // O componente agora é uma exportação nomeada e não mais o padrão
-export function LoginUI() {
+export function LoginUI({ message }: LoginUIProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("password");
@@ -33,6 +37,13 @@ export function LoginUI() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Função para determinar se a mensagem é de sucesso ou erro
+  const isSuccessMessage = (message: string) => {
+    return message.toLowerCase().includes('check email') || 
+           message.toLowerCase().includes('success') ||
+           message.toLowerCase().includes('enviado');
   };
 
   return (
@@ -68,6 +79,23 @@ export function LoginUI() {
             Bem-vindo de volta à plataforma
           </p>
         </div>
+
+        {/* Message Alert */}
+        {message && (
+          <div className={cn(
+            "mb-6 p-4 rounded-lg border flex items-start space-x-3",
+            isSuccessMessage(message) 
+              ? "bg-emerald-900/20 border-emerald-500/30 text-emerald-300" 
+              : "bg-red-900/20 border-red-500/30 text-red-300"
+          )}>
+            {isSuccessMessage(message) ? (
+              <CheckCircle className="w-5 h-5 mt-0.5 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 mt-0.5 text-red-400" />
+            )}
+            <p className="text-sm leading-relaxed">{message}</p>
+          </div>
+        )}
 
         {/* Login Card */}
         <Card className="card-glass-intense border-brand-gray-700/50 shadow-2xl shadow-black/50">

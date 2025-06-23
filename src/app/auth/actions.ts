@@ -14,7 +14,7 @@ export async function signInWithPassword(formData: FormData) {
   })
 
   if (error) {
-    return redirect(`/auth/login?message=${encodeURIComponent(error.message)}`)
+    return redirect(`/?message=${encodeURIComponent(error.message)}`)
   }
 
   return redirect('/')
@@ -32,10 +32,10 @@ export async function signInWithOtp(formData: FormData) {
   })
 
   if (error) {
-    return redirect(`/auth/login?message=${encodeURIComponent(error.message)}`)
+    return redirect(`/?message=${encodeURIComponent(error.message)}`)
   }
 
-  return redirect('/auth/login?message=Check email to continue sign in process')
+  return redirect('/?message=Check email to continue sign in process')
 }
 
 export async function signUp(formData: FormData) {
@@ -55,11 +55,11 @@ export async function signUp(formData: FormData) {
     return redirect(`/auth/signup?message=${encodeURIComponent(error.message)}`)
   }
 
-  return redirect('/auth/login?message=Check email to continue sign in process')
+  return redirect('/?message=Check email to continue sign in process')
 }
 
 export async function signOut() {
   const supabase = createClient()
   await supabase.auth.signOut()
-  return redirect('/auth/login')
+  return redirect('/')
 } 
