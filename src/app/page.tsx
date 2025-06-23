@@ -1,5 +1,5 @@
-import LoginPage from "@/app/auth/login/page";
+import { LoginUI } from '@/components/auth/LoginUI';
 
 export default function HomePage() {
-  return <LoginPage />;
+  return <LoginUI />;
 }
