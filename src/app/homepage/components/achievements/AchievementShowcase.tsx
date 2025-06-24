@@ -10,22 +10,21 @@ import { AchievementCard, NextAchievementCard } from '../AchievementCard'
 import { getCategoryIcon } from '../../utils/achievementIcons'
 import { cn } from '@/lib/utils'
 
-// SISTEMA DE SPACING HARMONIZADO
-const SPACING = {
-  xs: 2,    // 8px
-  sm: 3,    // 12px
-  md: 4,    // 16px
-  lg: 5,    // 20px
-  xl: 6,    // 24px
+// Usando sistema premium V2.0
+const SPACING_PREMIUM = {
+  xs: 'var(--spacing-xs)',
+  sm: 'var(--spacing-sm)',
+  md: 'var(--spacing-md)',
+  lg: 'var(--spacing-lg)',
+  xl: 'var(--spacing-xl)',
 } as const
 
-// SISTEMA DE HEIGHTS HARMONIZADO
-const HEIGHTS = {
-  achievement_container: 'min-h-[200px]',     // Container principal
-  header: 'h-[60px]',                         // Header compacto
-  achievement_item: 'h-[80px]',               // Item individual
-  stats_item: 'h-[70px]',                     // Stats compactos
-  progress_item: 'h-[90px]',                  // Item de progresso
+const HEIGHTS_PREMIUM = {
+  achievement_container: 'hp-section',        // Container premium
+  header: 'hp-header',                        // Header unificado
+  achievement_item: 'hp-item',                // Item harmonizado
+  stats_item: 'hp-compact',                   // Stats compactos
+  progress_item: 'hp-item',                   // Progress harmonizado
 } as const
 
 interface AchievementShowcaseProps {
@@ -47,23 +46,21 @@ const containerVariants = {
 export function AchievementShowcase({ achievements, nextAchievements = [] }: AchievementShowcaseProps) {
   if (achievements.length === 0) {
     return (
-      <div className={cn(HEIGHTS.achievement_container, "flex flex-col justify-center")}>
-        <div className="text-center">
-          <div className={cn("bg-brand-gray-800/50 rounded-lg w-fit mx-auto", `p-${SPACING.sm} mb-${SPACING.sm}`)}>
-            <Trophy className="w-6 h-6 text-brand-gray-500" />
-          </div>
-          <h3 className={cn("text-base font-semibold text-white", `mb-${SPACING.xs}`)}>
-            Nenhuma conquista ainda
-          </h3>
-          <p className={cn("text-brand-gray-400 text-sm", `mb-${SPACING.md}`)}>
-            Continue criando para desbloquear conquistas!
-          </p>
-          <Button className="btn-neon text-sm" asChild>
-            <Link href="/new">
-              Criar Primeiro Criativo
-            </Link>
-          </Button>
+      <div className="text-center py-[var(--spacing-xl)]">
+        <div className="w-16 h-16 bg-brand-gray-800/50 rounded-xl flex items-center justify-center mx-auto mb-[var(--spacing-md)]">
+          <Trophy className="w-8 h-8 text-brand-gray-500" />
         </div>
+        <h3 className="hp-text-title mb-[var(--spacing-xs)]">
+          Nenhuma conquista ainda
+        </h3>
+        <p className="hp-text-body text-brand-gray-400 mb-[var(--spacing-md)]">
+          Continue criando para desbloquear conquistas!
+        </p>
+        <Button className="button-premium" asChild>
+          <Link href="/new">
+            Criar Primeiro Criativo
+          </Link>
+        </Button>
       </div>
     )
   }
@@ -78,122 +75,108 @@ export function AchievementShowcase({ achievements, nextAchievements = [] }: Ach
   const recentAchievements = achievements.filter(a => a.is_new || a.is_featured).slice(0, 3)
   
   return (
-    <div className={cn(HEIGHTS.achievement_container, `space-y-${SPACING.md}`)}>
-      {/* Header Compacto HARMONIZADO */}
-      <div className={cn(HEIGHTS.header, "flex items-center justify-between")}>
-        <div className={cn("flex items-center", `gap-${SPACING.sm}`)}>
-          <div className={cn("bg-purple-500/10 rounded-lg border border-purple-500/30", `p-${SPACING.xs}`)}>
-            <Trophy className="w-5 h-5 text-purple-400" />
+    <>
+      {/* Header Premium */}
+      <div className="flex items-center justify-between mb-[var(--spacing-lg)]">
+        <div className="flex items-center gap-[var(--spacing-sm)]">
+          <div className="w-12 h-12 bg-purple-500/10 rounded-xl border border-purple-500/30 flex items-center justify-center">
+            <Trophy className="w-6 h-6 text-purple-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white leading-tight">
-              Conquistas ({achievements.length})
-            </h3>
-            <p className="text-brand-gray-400 text-sm leading-tight">
-              {achievements.filter(a => a.is_new).length} novas
-            </p>
+            <h3 className="hp-text-title">Conquistas ({achievements.length})</h3>
+            <p className="hp-text-caption">{achievements.filter(a => a.is_new).length} novas</p>
           </div>
         </div>
         
-        <Button variant="ghost" size="sm" className="btn-ghost text-xs" asChild>
+        <Button variant="ghost" size="sm" className="button-secondary-premium" asChild>
           <Link href="/achievements">
             Ver Todas
-            <ChevronRight className={cn("w-3 h-3", `ml-${SPACING.xs}`)} />
+            <ChevronRight className="w-4 h-4 ml-2" />
           </Link>
         </Button>
       </div>
 
-      {/* Stats Rápidas HARMONIZADAS */}
-      <div className={cn("grid grid-cols-2", `gap-${SPACING.xs}`)}>
+      {/* Stats Rápidas Premium */}
+      <div className="grid grid-cols-2 gap-[var(--spacing-xs)] mb-[var(--spacing-lg)] animate-premium-stagger">
         {Object.entries(achievementsByCategory).slice(0, 4).map(([category, count]) => {
           const IconComponent = getCategoryIcon(category)
           return (
             <div
               key={category}
-              className={cn(
-                "bg-brand-gray-800/50 border border-brand-gray-700/50 rounded-lg text-center flex flex-col justify-center",
-                HEIGHTS.stats_item,
-                `p-${SPACING.sm}`
-              )}
+              className="card-premium hp-compact flex flex-col items-center justify-center text-center hp-padding-sm hover-lift-premium"
             >
-              <div className={cn("flex justify-center", `mb-${SPACING.xs}`)}>
+              <div className="w-8 h-8 bg-brand-neon-green/10 rounded-lg flex items-center justify-center mb-2">
                 <IconComponent className="w-4 h-4 text-brand-neon-green" />
               </div>
-              <p className="text-lg font-bold text-white leading-tight">{count}</p>
-              <p className="text-xs text-brand-gray-400 capitalize leading-tight">{category}</p>
+              <p className="hp-text-subtitle font-bold text-white">{count}</p>
+              <p className="hp-text-caption text-brand-gray-400 capitalize">{category}</p>
             </div>
           )
         })}
       </div>
 
-      {/* Conquistas Recentes/Destacadas HARMONIZADAS */}
+      {/* Conquistas Recentes Premium */}
       {recentAchievements.length > 0 && (
-        <div className={cn(`space-y-${SPACING.sm}`)}>
-          <div className={cn("flex items-center", `gap-${SPACING.xs}`)}>
+        <div className="space-y-[var(--spacing-sm)]">
+          <div className="flex items-center gap-[var(--spacing-xs)]">
             <div className="w-1 h-4 bg-brand-neon-green rounded-full" />
-            <h4 className="text-sm font-semibold text-white leading-tight">Recentes</h4>
+            <h4 className="hp-text-body font-semibold text-white">Recentes</h4>
           </div>
           
-          <div className={cn(`space-y-${SPACING.xs}`)}>
+          <div className="space-y-[var(--spacing-xs)] animate-premium-stagger">
             {recentAchievements.map((achievement, index) => (
               <motion.div
                 key={achievement.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={cn(
-                  "flex items-center bg-brand-gray-800/50 border border-brand-gray-700/50 hover:border-brand-neon-green/30 transition-all duration-300 rounded-lg",
-                  HEIGHTS.achievement_item,
-                  `gap-${SPACING.sm} p-${SPACING.sm}`
-                )}
+                className="hover-lift-premium"
               >
-                <div className={cn(
-                  "rounded-lg flex-shrink-0 flex items-center justify-center",
-                  achievement.rarity === 'legendary' ? 'bg-yellow-500/20 border border-yellow-500/50' :
-                  achievement.rarity === 'epic' ? 'bg-purple-500/20 border border-purple-500/50' :
-                  achievement.rarity === 'rare' ? 'bg-blue-500/20 border border-blue-500/50' :
-                  'bg-green-500/20 border border-green-500/50',
-                  `p-${SPACING.xs}`
-                )}>
-                  <Trophy className={cn(
-                    "w-4 h-4",
-                    achievement.rarity === 'legendary' ? 'text-yellow-400' :
-                    achievement.rarity === 'epic' ? 'text-purple-400' :
-                    achievement.rarity === 'rare' ? 'text-blue-400' :
-                    'text-green-400'
-                  )} />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className={cn("flex items-center", `gap-${SPACING.xs} mb-${SPACING.xs}`)}>
-                    <h5 className="text-white font-medium text-sm truncate leading-tight">
-                      {achievement.name}
-                    </h5>
-                    {achievement.is_new && (
-                      <span className={cn(
-                        "bg-brand-neon-green text-brand-black text-xs font-medium rounded-full",
-                        `px-${SPACING.xs} py-0.5`
-                      )}>
-                        NOVO
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-brand-gray-400 text-xs line-clamp-1 leading-tight">
-                    {achievement.description}
-                  </p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-brand-neon-green font-medium text-xs leading-tight">
-                      +{achievement.points} XP
-                    </span>
-                    <span className={cn(
-                      "text-xs font-medium capitalize leading-tight",
+                <div className="bg-brand-gray-800/50 border border-brand-gray-700/50 rounded-lg p-3 flex items-center gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center border",
+                    achievement.rarity === 'legendary' ? 'bg-yellow-500/20 border-yellow-500/50' :
+                    achievement.rarity === 'epic' ? 'bg-purple-500/20 border-purple-500/50' :
+                    achievement.rarity === 'rare' ? 'bg-blue-500/20 border-blue-500/50' :
+                    'bg-green-500/20 border-green-500/50'
+                  )}>
+                    <Trophy className={cn(
+                      "w-5 h-5",
                       achievement.rarity === 'legendary' ? 'text-yellow-400' :
                       achievement.rarity === 'epic' ? 'text-purple-400' :
                       achievement.rarity === 'rare' ? 'text-blue-400' :
                       'text-green-400'
-                    )}>
-                      {achievement.rarity}
-                    </span>
+                    )} />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h5 className="hp-text-body font-medium text-white truncate">
+                        {achievement.name}
+                      </h5>
+                      {achievement.is_new && (
+                        <span className="bg-brand-neon-green text-brand-black hp-text-caption font-semibold rounded-full px-2 py-0.5">
+                          NOVO
+                        </span>
+                      )}
+                    </div>
+                    <p className="hp-text-caption text-brand-gray-400 line-clamp-1">
+                      {achievement.description}
+                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="hp-text-caption text-brand-neon-green font-medium">
+                        +{achievement.points} XP
+                      </span>
+                      <span className={cn(
+                        "hp-text-caption font-medium capitalize",
+                        achievement.rarity === 'legendary' ? 'text-yellow-400' :
+                        achievement.rarity === 'epic' ? 'text-purple-400' :
+                        achievement.rarity === 'rare' ? 'text-blue-400' :
+                        'text-green-400'
+                      )}>
+                        {achievement.rarity}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -202,57 +185,58 @@ export function AchievementShowcase({ achievements, nextAchievements = [] }: Ach
         </div>
       )}
 
-      {/* Próximas Conquistas HARMONIZADAS */}
+      {/* Próximas Conquistas Premium */}
       {nextAchievements.length > 0 && (
-        <div className={cn(`space-y-${SPACING.sm}`)}>
-          <div className={cn("flex items-center", `gap-${SPACING.xs}`)}>
+        <div className="space-y-[var(--spacing-sm)]">
+          <div className="flex items-center gap-[var(--spacing-xs)]">
             <div className="w-1 h-4 bg-blue-400 rounded-full" />
-            <h4 className="text-sm font-semibold text-white leading-tight">Próximas</h4>
+            <h4 className="hp-text-body font-semibold text-white">Próximas</h4>
           </div>
           
-          <div className={cn(`space-y-${SPACING.xs}`)}>
+          <div className="space-y-[var(--spacing-xs)] animate-premium-stagger">
             {nextAchievements.slice(0, 2).map((next, index) => (
-              <div 
+              <motion.div
                 key={index}
-                className={cn(
-                  "bg-brand-gray-800/50 border border-brand-gray-700/50 rounded-lg",
-                  HEIGHTS.progress_item,
-                  `p-${SPACING.sm}`
-                )}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="hover-lift-premium"
               >
-                <div className={cn("flex items-center justify-between", `mb-${SPACING.xs}`)}>
-                  <h5 className="text-white font-medium text-sm leading-tight">{next.name}</h5>
-                  <span className="text-brand-gray-400 text-xs leading-tight">
-                    {next.progress}/{next.maxProgress}
-                  </span>
+                <div className="bg-brand-gray-800/50 border border-brand-gray-700/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-[var(--spacing-xs)]">
+                    <h5 className="hp-text-body font-medium text-white">{next.name}</h5>
+                    <span className="hp-text-caption text-brand-gray-400">
+                      {next.progress}/{next.maxProgress}
+                    </span>
+                  </div>
+                  <div className="w-full bg-brand-gray-700 rounded-full h-1.5 mb-[var(--spacing-xs)]">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-400 h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${(next.progress / next.maxProgress) * 100}%` }}
+                    />
+                  </div>
+                  <p className="hp-text-caption text-brand-gray-400 line-clamp-1">
+                    {next.description}
+                  </p>
                 </div>
-                <div className={cn("w-full bg-brand-gray-700 rounded-full h-1.5", `mb-${SPACING.xs}`)}>
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-blue-400 h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${(next.progress / next.maxProgress) * 100}%` }}
-                  />
-                </div>
-                <p className="text-brand-gray-400 text-xs line-clamp-1 leading-tight">
-                  {next.description}
-                </p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Call to Action compacto HARMONIZADO */}
+      {/* Call to Action Premium */}
       {achievements.length > 3 && (
-        <div className={cn("pt-3 border-t border-brand-gray-700/50 text-center", `mt-${SPACING.md}`)}>
-          <Button variant="ghost" size="sm" className="btn-ghost text-xs" asChild>
+        <div className="pt-3 border-t border-brand-gray-700/50 text-center mt-[var(--spacing-md)]">
+          <Button variant="ghost" size="sm" className="button-secondary-premium" asChild>
             <Link href="/achievements">
               Ver mais {achievements.length - 3} conquistas
-              <ChevronRight className={cn("w-3 h-3", `ml-${SPACING.xs}`)} />
+              <ChevronRight className="w-3 h-3 ml-[var(--spacing-xs)]" />
             </Link>
           </Button>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

@@ -28,40 +28,65 @@ export type DashboardData = {
  * @returns {Promise<DashboardData>} A promise that resolves to the comprehensive dashboard data.
  * @throws {Error} If the user is not authenticated or if the data fetching fails.
  */
-export async function getDashboardData(): Promise<DashboardData> {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+export async function getDashboardData(): Promise<{ success: boolean; data?: DashboardData; error?: string }> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
         },
       },
-    },
-  )
+    )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (!user) {
-    throw new Error('User is not authenticated.')
+    if (!user) {
+      return {
+        success: false,
+        error: 'User is not authenticated.'
+      }
+    }
+
+    const { data, error } = await supabase.rpc('get_user_dashboard_data' as any, {
+      target_user_id: user.id,
+    })
+
+    if (error) {
+      console.error('Error fetching dashboard data:', error)
+      return {
+        success: false,
+        error: `Failed to fetch dashboard data: ${error.message}`
+      }
+    }
+
+    if (!data) {
+      return {
+        success: false,
+        error: 'No dashboard data returned'
+      }
+    }
+
+    // The RPC function is expected to return a single JSONB object.
+    // We cast it to our defined type for type safety in the frontend.
+    return {
+      success: true,
+      data: data as unknown as DashboardData
+    }
+
+  } catch (err) {
+    console.error('Unexpected error in getDashboardData:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unexpected error occurred'
+    }
   }
-
-  const { data, error } = await supabase.rpc('get_user_dashboard_data' as any, {
-    target_user_id: user.id,
-  })
-
-  if (error) {
-    console.error('Error fetching dashboard data:', error)
-    throw new Error('Failed to fetch dashboard data.')
-  }
-
-  // The RPC function is expected to return a single JSONB object.
-  // We cast it to our defined type for type safety in the frontend.
-  return data as unknown as DashboardData
 }
 
 /**
@@ -71,37 +96,55 @@ export async function getDashboardData(): Promise<DashboardData> {
  * @returns {Promise<RecentCreative[]>} A promise that resolves to an array of recent creatives.
  * @throws {Error} If the user is not authenticated or if the data fetching fails.
  */
-export async function getRecentCreatives(): Promise<RecentCreative[]> {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+export async function getRecentCreatives(): Promise<{ success: boolean; data?: RecentCreative[]; error?: string }> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
         },
       },
-    },
-  )
+    )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (!user) {
-    throw new Error('User is not authenticated.')
+    if (!user) {
+      return {
+        success: false,
+        error: 'User is not authenticated.'
+      }
+    }
+
+    const { data, error } = await supabase.rpc('get_user_recent_creatives' as any, {
+      target_user_id: user.id,
+      limit_count: 5,
+    })
+
+    if (error) {
+      console.error('Error fetching recent creatives:', error)
+      return {
+        success: false,
+        error: `Failed to fetch recent creatives: ${error.message}`
+      }
+    }
+
+    return {
+      success: true,
+      data: (data as unknown as RecentCreative[]) ?? []
+    }
+
+  } catch (err) {
+    console.error('Unexpected error in getRecentCreatives:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unexpected error occurred'
+    }
   }
-
-  const { data, error } = await supabase.rpc('get_user_recent_creatives' as any, {
-    target_user_id: user.id,
-    limit_count: 5,
-  })
-
-  if (error) {
-    console.error('Error fetching recent creatives:', error)
-    throw new Error('Failed to fetch recent creatives.')
-  }
-
-  return (data as unknown as RecentCreative[]) ?? []
 } 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ const realtimeHandlers = { onUpdate: () => {} };
 const realtimeConfig = { enabled: true };
 
 export default function NewCreativePage() {
+  const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
@@ -130,12 +132,12 @@ export default function NewCreativePage() {
   const onSubmit = async (data: CreateCreativeData) => {
     setIsLoading(true);
     
-    if (isMultiFormat) {
-      toast.info("Criando múltiplos criativos...", {
-        description: `Gerando ${selectedFormats.length} formato(s)`
-      });
+    try {
+      if (isMultiFormat) {
+        toast.info("Adicionando à fila...", {
+          description: `Preparando ${selectedFormats.length} formato(s)`
+        });
 
-      try {
         // Converte data para CreateCreativeRequestData
         const requestData: CreateCreativeRequestData = {
           title: data.title,
@@ -152,33 +154,40 @@ export default function NewCreativePage() {
           requested_formats: selectedFormats as any
         };
 
-        await createCreativeRequest(requestData);
-        toast.success("Múltiplos criativos criados com sucesso!", {
-          description: "Redirecionando para a fila de processamento..."
+        const result = await createCreativeRequest(requestData);
+        
+        if (result.success) {
+          toast.success("Adicionado à fila com sucesso!", {
+            description: `${selectedFormats.length} formato(s) em processamento`
+          });
+          
+          // Redireciona imediatamente usando router
+          router.push("/queue");
+        }
+      } else {
+        toast.info("Adicionando à fila...", {
+          description: "Preparando criativo para processamento"
         });
-      } catch (error: any) {
-        toast.error("Erro ao criar criativos", {
-          description: error.message
-        });
-      }
-    } else {
-      toast.info("Criando criativo...", {
-        description: "Adicionando à fila de processamento"
-      });
 
-      try {
-        await createCreative(data);
-        toast.success("Criativo criado com sucesso!", {
-          description: "Redirecionando para a fila de processamento..."
-        });
-      } catch (error: any) {
-        toast.error("Erro ao criar criativo", {
-          description: error.message
-        });
+        const result = await createCreative(data);
+        
+        if (result.success) {
+          toast.success("Adicionado à fila com sucesso!", {
+            description: "Criativo em processamento"
+          });
+          
+          // Redireciona imediatamente usando router
+          router.push("/queue");
+        }
       }
+    } catch (error: any) {
+      toast.error("Erro ao adicionar à fila", {
+        description: error.message
+      });
+    } finally {
+      // Libera o botão imediatamente após adicionar à fila
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   // Salvar como rascunho

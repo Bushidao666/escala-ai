@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { 
   createCreativeSchema, 
   type CreateCreativeData,
@@ -245,8 +244,7 @@ export async function createCreative(formData: CreateCreativeData) {
   revalidatePath("/new");
   revalidatePath("/queue");
   
-  // Redireciona para a fila para acompanhar o processamento
-  redirect("/queue");
+  return { success: true, creative_id: creative.id };
 }
 
 /**
@@ -696,8 +694,7 @@ export async function createCreativeRequest(formData: CreateCreativeRequestData)
   revalidatePath("/new");
   revalidatePath("/queue");
   
-  // Redireciona para a fila para acompanhar o processamento
-  redirect("/queue");
+  return { success: true, request_id: creativeRequest.id, creatives_count: createdCreatives.length };
 }
 
 /**

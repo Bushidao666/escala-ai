@@ -18,20 +18,19 @@ import {
 import { RecentActivity } from '../types'
 import { cn } from '@/lib/utils'
 
-// SISTEMA DE SPACING HARMONIZADO
-const SPACING = {
-  xs: 2,    // 8px
-  sm: 3,    // 12px
-  md: 4,    // 16px
-  lg: 5,    // 20px
-  xl: 6,    // 24px
+// Usando sistema premium V2.0
+const SPACING_PREMIUM = {
+  xs: 'var(--spacing-xs)',
+  sm: 'var(--spacing-sm)',
+  md: 'var(--spacing-md)',
+  lg: 'var(--spacing-lg)',
+  xl: 'var(--spacing-xl)',
 } as const
 
-// SISTEMA DE HEIGHTS HARMONIZADO
-const HEIGHTS = {
-  activity_container: 'min-h-[200px]',     // Container principal
-  header: 'h-[60px]',                      // Header compacto
-  activity_item: 'h-[75px]',               // Item individual
+const HEIGHTS_PREMIUM = {
+  activity_container: 'hp-section',        // Container premium
+  header: 'hp-header',                     // Header unificado  
+  activity_item: 'hp-item',                // Item harmonizado
 } as const
 
 const getActivityIcon = (action: string) => {
@@ -125,49 +124,43 @@ interface RecentActivityFeedProps {
 export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
   if (activities.length === 0) {
     return (
-      <div className={cn(HEIGHTS.activity_container, "flex flex-col justify-center")}>
-        <div className="text-center">
-          <div className={cn("bg-brand-gray-800/50 rounded-lg w-fit mx-auto", `p-${SPACING.sm} mb-${SPACING.sm}`)}>
-            <Activity className="w-6 h-6 text-brand-gray-500" />
-          </div>
-          <h3 className={cn("text-base font-semibold text-white", `mb-${SPACING.xs}`)}>
-            Nenhuma atividade recente
-          </h3>
-          <p className="text-brand-gray-400 text-sm leading-tight">
-            Suas atividades aparecerão aqui!
-          </p>
+      <div className="text-center py-[var(--spacing-xl)]">
+        <div className="w-16 h-16 bg-brand-gray-800/50 rounded-xl flex items-center justify-center mx-auto mb-[var(--spacing-md)]">
+          <Activity className="w-8 h-8 text-brand-gray-500" />
         </div>
+        <h3 className="hp-text-title mb-[var(--spacing-xs)]">
+          Nenhuma atividade recente
+        </h3>
+        <p className="hp-text-body text-brand-gray-400">
+          Suas atividades aparecerão aqui!
+        </p>
       </div>
     )
   }
 
   return (
-    <div className={cn(HEIGHTS.activity_container, `space-y-${SPACING.md}`)}>
-      {/* Header Compacto HARMONIZADO */}
-      <div className={cn(HEIGHTS.header, "flex items-center justify-between")}>
-        <div className={cn("flex items-center", `gap-${SPACING.sm}`)}>
-          <div className={cn("bg-green-500/10 rounded-lg border border-green-500/30", `p-${SPACING.xs}`)}>
-            <Activity className="w-5 h-5 text-green-400" />
+    <>
+      {/* Header Premium */}
+      <div className="flex items-center justify-between mb-[var(--spacing-lg)]">
+        <div className="flex items-center gap-[var(--spacing-sm)]">
+          <div className="w-12 h-12 bg-green-500/10 rounded-xl border border-green-500/30 flex items-center justify-center">
+            <Activity className="w-6 h-6 text-green-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white leading-tight">
-              Atividade Recente
-            </h3>
-            <p className="text-brand-gray-400 text-sm leading-tight">
-              Últimas {activities.length} ações
-            </p>
+            <h3 className="hp-text-title">Atividade Recente</h3>
+            <p className="hp-text-caption">Últimas {activities.length} ações</p>
           </div>
         </div>
         
         {/* Timestamp do último update */}
-        <div className={cn("flex items-center text-brand-gray-500", `gap-${SPACING.xs}`)}>
-          <Calendar className="w-3 h-3" />
-          <span className="text-xs leading-tight">Atualizado agora</span>
+        <div className="flex items-center text-brand-gray-500 gap-[var(--spacing-xs)]">
+          <Calendar className="w-4 h-4" />
+          <span className="hp-text-caption">Atualizado agora</span>
         </div>
       </div>
 
-      {/* Feed de Atividades HARMONIZADO */}
-      <div className={cn(`space-y-${SPACING.xs}`)}>
+      {/* Feed de Atividades Premium */}
+      <div className="space-y-[var(--spacing-xs)] animate-premium-stagger">
         {activities.slice(0, 4).map((activity, index) => {
           const IconComponent = getActivityIcon(activity.action)
           const iconColor = getActivityColor(activity.action)
@@ -179,60 +172,58 @@ export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
               key={`${activity.id}-${index}`}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className={cn(
-                "flex items-center bg-brand-gray-800/50 border border-brand-gray-700/50 hover:border-brand-gray-600/50 transition-all duration-300 rounded-lg",
-                HEIGHTS.activity_item,
-                `gap-${SPACING.sm} p-${SPACING.sm}`
-              )}
+              transition={{ delay: index * 0.06 }}
+              className="group hover-lift-premium"
             >
-              {/* Ícone da Atividade */}
-              <div className={cn("rounded-lg flex-shrink-0 border", bgColor, `p-${SPACING.xs}`)}>
-                <IconComponent className={cn("w-4 h-4", iconColor)} />
-              </div>
-              
-              {/* Conteúdo Principal */}
-              <div className="flex-1 min-w-0">
-                <div className={cn("flex items-center justify-between", `mb-${SPACING.xs}`)}>
-                  <h5 className="text-white font-medium text-sm leading-tight truncate">
-                    {actionText}
-                  </h5>
-                  <span className="text-brand-gray-400 text-xs leading-tight flex-shrink-0">
-                    {formatDistanceToNow(new Date(activity.created_at), {
-                      addSuffix: true,
-                      locale: ptBR
-                    })}
-                  </span>
+              <div className="bg-brand-gray-800/50 border border-brand-gray-700/50 rounded-lg p-3 flex items-center gap-4">
+                {/* Ícone da Atividade */}
+                <div className={cn("w-10 h-10 rounded-xl flex-shrink-0 border flex items-center justify-center", bgColor)}>
+                  <IconComponent className={cn("w-5 h-5", iconColor)} />
                 </div>
                 
-                {/* Metadata/Detalhes */}
-                {activity.metadata?.creative_title && (
-                  <p className="text-brand-gray-400 text-xs truncate leading-tight">
-                    "{activity.metadata.creative_title}"
-                  </p>
-                )}
+                {/* Conteúdo Principal */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h5 className="hp-text-body font-medium text-white truncate">
+                      {actionText}
+                    </h5>
+                    <span className="hp-text-caption text-brand-gray-400 flex-shrink-0">
+                      {formatDistanceToNow(new Date(activity.created_at), {
+                        addSuffix: true,
+                        locale: ptBR
+                      })}
+                    </span>
+                  </div>
+                  
+                  {/* Metadata/Detalhes */}
+                  {activity.metadata?.creative_title && (
+                    <p className="hp-text-caption text-brand-gray-400 truncate">
+                      "{activity.metadata.creative_title}"
+                    </p>
+                  )}
+                  
+                  {activity.metadata?.achievement_name && (
+                    <p className="hp-text-caption text-brand-neon-green truncate">
+                      +{activity.metadata.achievement_points || 0} XP
+                    </p>
+                  )}
+                  
+                  {activity.metadata?.file_size && (
+                    <p className="hp-text-caption text-brand-gray-400 truncate">
+                      {formatFileSize(activity.metadata.file_size)}
+                    </p>
+                  )}
+                </div>
                 
-                {activity.metadata?.achievement_name && (
-                  <p className="text-brand-neon-green text-xs truncate leading-tight">
-                    +{activity.metadata.achievement_points || 0} XP
-                  </p>
-                )}
-                
-                {activity.metadata?.file_size && (
-                  <p className="text-brand-gray-400 text-xs truncate leading-tight">
-                    {formatFileSize(activity.metadata.file_size)}
-                  </p>
-                )}
+                {/* Status Indicator */}
+                <div className={cn(
+                  "w-3 h-3 rounded-full flex-shrink-0",
+                  activity.action === 'creative_completed' ? 'bg-green-400 shadow-lg shadow-green-400/50' :
+                  activity.action === 'creative_created' ? 'bg-blue-400 shadow-lg shadow-blue-400/50' :
+                  activity.action === 'achievement_unlocked' ? 'bg-brand-neon-green shadow-lg shadow-brand-neon-green/50' :
+                  'bg-brand-gray-500'
+                )} />
               </div>
-              
-              {/* Status Indicator */}
-              <div className={cn(
-                "w-2 h-2 rounded-full flex-shrink-0",
-                activity.action === 'creative_completed' ? 'bg-green-400 shadow-lg shadow-green-400/50' :
-                activity.action === 'creative_created' ? 'bg-blue-400 shadow-lg shadow-blue-400/50' :
-                activity.action === 'achievement_unlocked' ? 'bg-brand-neon-green shadow-lg shadow-brand-neon-green/50' :
-                'bg-brand-gray-500'
-              )} />
             </motion.div>
           )
         })}
@@ -240,13 +231,13 @@ export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
 
       {/* Indicador de mais atividades */}
       {activities.length > 4 && (
-        <div className={cn("text-center pt-3 border-t border-brand-gray-700/50", `mt-${SPACING.md}`)}>
-          <span className="text-brand-gray-500 text-xs leading-tight">
+        <div className="text-center pt-6 border-t border-brand-gray-700/50 mt-[var(--spacing-md)]">
+          <span className="hp-text-caption text-brand-gray-500">
             +{activities.length - 4} atividades anteriores
           </span>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
