@@ -68,7 +68,7 @@ export function CreativeCard({ creative, isSelected, onSelectionChange, onCardCl
           </div>
         ) : (
           <img
-            src={creative.result_url || ''}
+            src={creative.result_url || undefined}
             alt={`Criativo: ${creative.title}`}
             className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={handleImageLoad}

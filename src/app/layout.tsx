@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { AnimatedBackground } from '@/components/ui/animated-background';
 import { headers } from 'next/headers';
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { RealtimeStatusIndicator } from '@/components/ui/RealtimeStatusIndicator';
+import { ThemeProvider } from "next-themes";
 
 const inter = Inter({ 
   subsets: ["latin"], 
@@ -123,6 +126,17 @@ export default async function RootLayout({
             `,
           }}
         />
+
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Toaster />
+          <SpeedInsights/>
+          <RealtimeStatusIndicator />
+        </ThemeProvider>
       </body>
     </html>
   );

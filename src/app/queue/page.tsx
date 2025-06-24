@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,31 +52,23 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getUserCreatives, reprocessCreative, deleteCreative, triggerQueueProcessing, getUserCreativeRequests } from "../new/actions";
+import { getUserCreatives, reprocessCreative, deleteCreative, triggerQueueProcessing, getUserCreativeRequests, fixInconsistentRequestStatuses } from "../new/actions";
 import { FORMAT_LABELS } from "@/lib/schemas/creative";
-import { CreativeRequestCard } from "./CreativeRequestCard";
+import { UnifiedCreativeCard } from "./UnifiedCreativeCard";
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { Tables } from '@/types/supabase';
 
-interface Creative {
-  id: string;
-  title: string;
-  prompt: string;
-  status: string;
-  format: string;
-  created_at: string;
-  updated_at: string;
-  result_url?: string;
-  error_message?: string;
-  queue_jobs?: any[];
-}
+// Types baseados nos tipos oficiais do Supabase
+type QueueCreative = Tables<'creatives'> & {
+  queue_jobs?: Tables<'queue_jobs'>[];
+};
 
-interface CreativeRequest {
-  id: string;
-  title: string;
-  status: 'pending' | 'processing' | 'completed' | 'partial' | 'failed';
-  requested_formats: string[];
-  created_at: string;
-  creatives: any[];
-}
+type QueueCreativeRequest = Tables<'creative_requests'> & {
+  creatives: QueueCreative[];
+};
+
+// Union type para items unificados
+type QueueItem = QueueCreative | QueueCreativeRequest;
 
 const STATUS_CONFIG = {
   draft: {
@@ -122,7 +115,7 @@ const STATUS_CONFIG = {
 
 // Modal de Preview Premium
 function CreativePreviewModal({ creative, isOpen, onClose }: { 
-  creative: Creative; 
+  creative: QueueCreative; 
   isOpen: boolean; 
   onClose: () => void; 
 }) {
@@ -400,71 +393,217 @@ function CreativePreviewModal({ creative, isOpen, onClose }: {
 }
 
 export default function QueuePage() {
-  const [creatives, setCreatives] = useState<Creative[]>([]);
-  const [creativeRequests, setCreativeRequests] = useState<CreativeRequest[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const [previewCreative, setPreviewCreative] = useState<QueueCreative | null>(null);
+  const [isFixingStatuses, setIsFixingStatuses] = useState(false);
+  const [autoFixCount, setAutoFixCount] = useState(0);
+  
+  // Estado dos dados
+  const [creatives, setCreatives] = useState<QueueCreative[]>([]);
+  const [creativeRequests, setCreativeRequests] = useState<QueueCreativeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
-  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
-  const [previewCreative, setPreviewCreative] = useState<Creative | null>(null);
 
-  // Carrega criativos iniciais
-  const loadData = async (showLoader = true) => {
+  // Efeito para buscar o ID do usuário uma vez
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null);
+    };
+    fetchUser();
+  }, []);
+
+  // Função para carregar dados (sempre busca todos os dados)
+  const loadData = useCallback(async (showLoader = true) => {
     try {
       if (showLoader) setIsLoading(true);
       
-      const filters = filterStatus === "all" ? {} : { status: filterStatus };
+      // 🆕 Sempre buscar TODOS os dados, filtro será client-side
+      const [creativesData, requestsData] = await Promise.all([
+        getUserCreatives({}), // Sem filtros - busca tudo
+        getUserCreativeRequests({} as any), // Sem filtros - busca tudo
+      ]);
 
-      // Buscar ambos os tipos de dados
-      const creativeData = await getUserCreatives(filters);
-      const requestData = await getUserCreativeRequests(filters as any); // "status" é compatível
-
-      setCreatives(creativeData as any);
-      setCreativeRequests(requestData as any);
-
+      setCreatives(creativesData as any);
+      setCreativeRequests(requestsData as any);
     } catch (error: any) {
-      toast.error("Erro ao carregar dados", {
-        description: error.message
-      });
+      console.error('Erro ao carregar dados:', error);
     } finally {
       if (showLoader) setIsLoading(false);
     }
-  };
+  }, []); // 🆕 Removido filterStatus da dependência
 
-  // Atualização em tempo real
-  const refreshData = async () => {
+  // Função de refresh
+  const forceRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await loadData(false);
     setIsRefreshing(false);
+  }, [loadData]);
+
+  // 🆕 Handler para mudanças de status de criativos
+  const onCreativeStatusChange = useCallback((creativeId: string, requestId: string | null, newStatus: string) => {
+    if (requestId) {
+      console.log(`🔔 Creative ${creativeId} in request ${requestId} changed to ${newStatus}`);
+      toast.info(`Criativo atualizado`, {
+        description: `Status alterado para ${newStatus}`,
+        duration: 3000,
+      });
+    }
+  }, []);
+
+  // 🆕 Handler para execução automática de correções
+  const onAutoFixExecuted = useCallback((correctedCount: number) => {
+    console.log(`🤖 Auto-fix executed: ${correctedCount} corrections`);
+    setAutoFixCount(prev => prev + correctedCount);
+    
+    if (correctedCount > 0) {
+      toast.success(`${correctedCount} status corrigido(s) automaticamente`, {
+        description: "Sistema de auto-correção ativo",
+        duration: 4000,
+        action: {
+          label: "Visualizar",
+          onClick: () => forceRefresh()
+        }
+      });
+    }
+  }, [forceRefresh]);
+
+  // Memoize handlers and config to prevent re-renders
+  const onUpdate = useCallback(() => {
+    console.log('🔄 Realtime update - refreshing data');
+    forceRefresh();
+  }, [forceRefresh]);
+
+  const realtimeHandlers = useMemo(() => ({ 
+    onUpdate,
+    onCreativeStatusChange,
+    onAutoFixExecuted
+  }), [onUpdate, onCreativeStatusChange, onAutoFixExecuted]);
+  
+  const realtimeConfig = useMemo(() => ({ 
+    enabled: true, 
+    enableDebugLogs: true,
+    enableSmartStatusUpdates: true,
+    enableAutoFix: true,
+    autoFixInterval: 5
+  }), []);
+
+  // Hook realtime com props estáveis
+  const { isConnected, executeAutoFix } = useSupabaseRealtime(userId, realtimeHandlers, realtimeConfig);
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    if (userId) {
+      loadData();
+    }
+  }, [userId, loadData]);
+
+  // 🆕 Calcular estatísticas incluindo requests (status agregado)
+  const stats = useMemo(() => {
+    // Criativos individuais
+    const individualCreatives = creatives;
+    
+    // Criativos de requests (para contar no total geral)
+    const requestCreatives = creativeRequests.flatMap(r => r.creatives);
+    
+    // Total de criativos individuais
+    const totalCreatives = individualCreatives.length + requestCreatives.length;
+    
+    // Total de "items" (criativos individuais + requests como items únicos)
+    const totalItems = individualCreatives.length + creativeRequests.length;
+    
+    return {
+      total: totalCreatives, // Contagem total de criativos
+      totalItems: totalItems, // Contagem total de items na interface
+      
+      // Contagens por status (incluindo criativos de requests)
+      queued: individualCreatives.filter(c => c.status === 'queued').length + 
+             requestCreatives.filter(c => c.status === 'queued').length,
+      processing: individualCreatives.filter(c => c.status === 'processing').length + 
+                 requestCreatives.filter(c => c.status === 'processing').length +
+                 creativeRequests.filter(r => r.status === 'processing').length, // requests em processamento
+      completed: individualCreatives.filter(c => c.status === 'completed').length + 
+                requestCreatives.filter(c => c.status === 'completed').length +
+                creativeRequests.filter(r => r.status === 'completed').length, // requests completos
+      failed: individualCreatives.filter(c => c.status === 'failed').length + 
+             requestCreatives.filter(c => c.status === 'failed').length +
+             creativeRequests.filter(r => r.status === 'failed').length, // requests falhados
+      draft: individualCreatives.filter(c => c.status === 'draft').length + 
+            requestCreatives.filter(c => c.status === 'draft').length,
+      
+      // Contagens específicas de requests por status
+      requests: {
+        pending: creativeRequests.filter(r => r.status === 'pending').length,
+        processing: creativeRequests.filter(r => r.status === 'processing').length,
+        completed: creativeRequests.filter(r => r.status === 'completed').length,
+        partial: creativeRequests.filter(r => r.status === 'partial').length,
+        failed: creativeRequests.filter(r => r.status === 'failed').length
+      }
+    };
+  }, [creatives, creativeRequests]);
+
+  // 🆕 Type guard para distinguir entre Creative e CreativeRequest
+  const isCreativeRequest = (item: QueueItem): item is QueueCreativeRequest => {
+    return 'requested_formats' in item && Array.isArray((item as any).creatives);
   };
 
-  useEffect(() => {
-    loadData();
+  // 🆕 Função para verificar se um item corresponde ao filtro
+  const itemMatchesFilter = (item: QueueItem): boolean => {
+    if (filterStatus === "all") return true;
     
-    // Auto-refresh a cada 5 segundos para jobs em processamento
-    const interval = setInterval(() => {
-      const hasProcessingCreatives = creatives.some(c => 
-        c.status === 'queued' || c.status === 'processing'
-      );
-      const hasProcessingRequests = creativeRequests.some(r => 
-        r.status === 'pending' || r.status === 'processing'
-      );
-      
-      if (hasProcessingCreatives || hasProcessingRequests) {
-        refreshData();
+    if (isCreativeRequest(item)) {
+      // Para requests, mapeia status especiais para filtros
+      switch (filterStatus) {
+        case "processing":
+          return item.status === 'processing' || item.status === 'pending';
+        case "completed":
+          return item.status === 'completed' || item.status === 'partial';
+        case "failed":
+          return item.status === 'failed';
+        case "queued":
+          return false; // Requests não têm status 'queued'
+        case "draft":
+          return false; // Requests não têm status 'draft'
+        default:
+          return item.status === filterStatus;
       }
-    }, 5000);
+    } else {
+      // Para criativos individuais, verifica o status direto
+      return item.status === filterStatus;
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, [filterStatus]);
+  // 🆕 Função unificada para combinar criativos individuais e requests
+  const getAllItems = (): QueueItem[] => {
+    const items: QueueItem[] = [];
+    
+    // Adiciona requests (múltiplos formatos) - já filtrados
+    const filteredRequestsForUnified = creativeRequests.filter(itemMatchesFilter);
+    items.push(...filteredRequestsForUnified);
+    
+    // Adiciona criativos individuais (que não pertencem a nenhum request) - já filtrados
+    const filteredCreativesForUnified = creatives.filter(itemMatchesFilter);
+    items.push(...filteredCreativesForUnified);
+    
+    // Ordena por data de criação (mais recente primeiro)
+    return items.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+  };
+
+  const allItems = getAllItems();
 
   // Reprocessar criativo
   const handleReprocess = async (creativeId: string) => {
     try {
       await reprocessCreative(creativeId);
       toast.success("Criativo adicionado à fila novamente");
-      await refreshData();
+      if (forceRefresh) forceRefresh();
     } catch (error: any) {
       toast.error("Erro ao reprocessar", {
         description: error.message
@@ -477,7 +616,7 @@ export default function QueuePage() {
     try {
       await deleteCreative(creativeId);
       toast.success("Criativo removido");
-      await refreshData();
+      if (forceRefresh) forceRefresh();
     } catch (error: any) {
       toast.error("Erro ao remover", {
         description: error.message
@@ -496,7 +635,7 @@ export default function QueuePage() {
       toast.success("Processamento acionado com sucesso!", {
         description: "A fila será processada em instantes"
       });
-      setTimeout(refreshData, 2000);
+      setTimeout(() => { if (forceRefresh) forceRefresh(); }, 2000);
     } catch (error: any) {
       toast.error("Erro ao acionar processamento", {
         description: error.message
@@ -507,7 +646,7 @@ export default function QueuePage() {
   };
 
   // Download inteligente
-  const handleSmartDownload = async (creative: Creative) => {
+  const handleSmartDownload = async (creative: QueueCreative) => {
     if (!creative.result_url) return;
     
     try {
@@ -544,7 +683,7 @@ export default function QueuePage() {
   };
 
   // Calcular progresso baseado no status
-  const getProgress = (creative: Creative) => {
+  const getProgress = (creative: QueueCreative) => {
     switch (creative.status) {
       case 'draft': return 0;
       case 'queued': return 25;
@@ -555,25 +694,39 @@ export default function QueuePage() {
     }
   };
 
-  // Filtrar criativos e requests (requests não são filtrados por status ainda, mas a estrutura está pronta)
-  const filteredCreatives = creatives.filter(creative => 
-    filterStatus === "all" || creative.status === filterStatus
-  );
-
-  const filteredRequests = creativeRequests; // Adicionar filtro aqui se necessário
-
-  // Estatísticas avançadas
-  const stats = {
-    total: creativeRequests.reduce((acc, r) => acc + r.creatives.length, 0) + creatives.length,
-    queued: creativeRequests.reduce((acc, r) => acc + r.creatives.filter(c => c.status === 'queued').length, 0) + creatives.filter(c => c.status === 'queued').length,
-    processing: creativeRequests.reduce((acc, r) => acc + r.creatives.filter(c => c.status === 'processing').length, 0) + creatives.filter(c => c.status === 'processing').length,
-    completed: creativeRequests.reduce((acc, r) => acc + r.creatives.filter(c => c.status === 'completed').length, 0) + creatives.filter(c => c.status === 'completed').length,
-    failed: creativeRequests.reduce((acc, r) => acc + r.creatives.filter(c => c.status === 'failed').length, 0) + creatives.filter(c => c.status === 'failed').length,
-    draft: creatives.filter(c => c.status === 'draft').length,
-  };
-
   const successRate = stats.total > 0 ? Math.round((stats.completed / (stats.completed + stats.failed)) * 100) || 0 : 0;
   const activeJobs = stats.queued + stats.processing;
+
+  // 🆕 Handler para correção manual de status (agora como backup)
+  const handleFixStatuses = async () => {
+    setIsFixingStatuses(true);
+    try {
+      // Usa a nova função de auto-fix via Edge Function
+      const result = await executeAutoFix();
+      
+      if (result.correctedCount > 0) {
+        toast.success(`${result.correctedCount} solicitação(ões) corrigida(s)!`, {
+          description: "Correção manual executada com sucesso"
+        });
+        
+        // Log detalhado no console para debug
+        console.log('🔧 Manual fix applied:', result);
+        
+        // Refresh data
+        forceRefresh();
+      } else {
+        toast.info("Nenhuma correção necessária", {
+          description: "Todos os status estão corretos"
+        });
+      }
+    } catch (error: any) {
+      toast.error("Erro ao corrigir status", {
+        description: error.message
+      });
+    } finally {
+      setIsFixingStatuses(false);
+    }
+  };
 
   if (isLoading) {
   return (
@@ -608,44 +761,60 @@ export default function QueuePage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-white tracking-tight">
-                  Dashboard da Fila
+                  <Timer className="w-5 h-5 mr-3 text-brand-neon-green" />
+                  Fila de Processamento
                 </h1>
-                <p className="text-brand-gray-400 text-lg mt-1 flex items-center">
-                  Monitoramento em tempo real dos seus criativos
-                  {(stats.queued > 0 || stats.processing > 0) && (
-                    <span className="ml-3 flex items-center text-brand-neon-green text-sm">
-                      <div className="w-2 h-2 bg-brand-neon-green rounded-full animate-pulse mr-2"></div>
-                      Live
-                    </span>
-                  )}
-                </p>
+                <div className="text-brand-gray-400 text-lg mt-1 flex items-center">
+                  Acompanhe o status dos seus criativos em tempo real
+                  <span className="ml-3 flex items-center">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full animate-pulse mr-2",
+                      isConnected ? "bg-brand-neon-green" : "bg-red-500"
+                    )}></div>
+                    {isConnected ? 'Sistema Inteligente Ativo' : 'Reconectando...'}
+                    {autoFixCount > 0 && (
+                      <span className="ml-2 px-2 py-1 bg-brand-neon-green/20 text-brand-neon-green text-xs rounded-full">
+                        {autoFixCount} correções automáticas
+                      </span>
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
 
+            {/* Actions Bar */}
             <div className="flex items-center space-x-3">
               <Button
-                onClick={refreshData}
-                disabled={isRefreshing}
-                className="btn-ghost h-11 px-4"
+                onClick={handleFixStatuses}
+                disabled={isFixingStatuses}
+                className="btn-ghost border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                title="Correção manual de backup - o sistema já corrige automaticamente"
               >
+                {isFixingStatuses ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                )}
+                {isFixingStatuses ? "Corrigindo..." : "Backup Fix"}
+              </Button>
+
+              <Button onClick={forceRefresh} disabled={isRefreshing} className="btn-ghost">
                 <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
                 Atualizar
               </Button>
 
-              <Button
-                onClick={handleProcessQueue}
-                disabled={isProcessingQueue || activeJobs === 0}
-                className="btn-neon h-11 px-6"
-              >
+              <Button onClick={handleProcessQueue} disabled={isProcessingQueue} className="btn-neon">
                 {isProcessingQueue ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Zap className="w-4 h-4 mr-2" />
+                  <Play className="w-4 h-4 mr-2" />
                 )}
                 {isProcessingQueue ? "Processando..." : "Processar Fila"}
               </Button>
             </div>
           </div>
+
+
 
           {/* Dashboard de Métricas */}
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
@@ -750,10 +919,18 @@ export default function QueuePage() {
                   
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { key: "all", label: "Todos", count: stats.total },
+                      { key: "all", label: "Todos", count: stats.totalItems },
                       { key: "queued", label: "Na Fila", count: stats.queued },
-                      { key: "processing", label: "Processando", count: stats.processing },
-                      { key: "completed", label: "Concluídos", count: stats.completed },
+                      { 
+                        key: "processing", 
+                        label: "Processando", 
+                        count: stats.processing + stats.requests.pending // Inclui pending
+                      },
+                      { 
+                        key: "completed", 
+                        label: "Concluídos", 
+                        count: stats.completed + stats.requests.partial // Inclui partial
+                      },
                       { key: "failed", label: "Falharam", count: stats.failed },
                       { key: "draft", label: "Rascunhos", count: stats.draft }
                     ].map(filter => (
@@ -780,7 +957,7 @@ export default function QueuePage() {
 
                 <div className="flex items-center space-x-2">
                   <span className="text-brand-gray-400 text-sm">
-                    {filteredRequests.length + filteredCreatives.length} {filteredRequests.length + filteredCreatives.length === 1 ? 'item' : 'itens'}
+                    {allItems.length} {allItems.length === 1 ? 'item' : 'itens'}
                   </span>
                 </div>
               </div>
@@ -788,9 +965,9 @@ export default function QueuePage() {
           </Card>
         </div>
 
-        {/* Lista de Criativos */}
+        {/* Lista Unificada de Criativos */}
         <div className="space-y-4">
-          {(filteredRequests.length + filteredCreatives.length) === 0 ? (
+          {allItems.length === 0 ? (
             <Card className="card-glass-intense border-brand-gray-700/50">
               <CardContent className="p-16 text-center">
                 <div className="relative mb-6">
@@ -821,204 +998,21 @@ export default function QueuePage() {
             </Card>
           ) : (
             <>
-              {/* NOVOS: Renderizar Creative Requests */}
-              {filteredRequests.map((request) => (
-                <CreativeRequestCard key={request.id} request={request} onUpdate={refreshData} />
+              {/* 🆕 Renderização Unificada */}
+              {allItems.map((item) => (
+                <UnifiedCreativeCard 
+                  key={item.id} 
+                  item={item}
+                  onUpdate={forceRefresh}
+                  onPreview={setPreviewCreative}
+                />
               ))}
-
-              {/* ANTIGOS: Renderizar Creatives Individuais */}
-              {filteredCreatives.map((creative) => {
-                const statusConfig = STATUS_CONFIG[creative.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.draft;
-                const StatusIcon = statusConfig.icon;
-                const progress = getProgress(creative);
-                const latestJob = creative.queue_jobs?.[0];
-    
-                return (
-                  <Card 
-                    key={creative.id} 
-                    className="card-glass-intense border-brand-gray-700/50 hover:border-brand-neon-green/30 transition-all duration-500 group"
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        
-                        {/* Informações Principais */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start space-x-4">
-                            
-                            {/* Status Icon */}
-                            <div className="flex-shrink-0">
-                              <div className="relative">
-                                <div className={cn(
-                                  "absolute inset-0 rounded-xl blur-md transition-all duration-300",
-                                  creative.status === 'completed' && "bg-brand-neon-green/20",
-                                  creative.status === 'processing' && "bg-yellow-500/20",
-                                  creative.status === 'failed' && "bg-red-500/20",
-                                  creative.status === 'queued' && "bg-blue-500/20"
-                                )}></div>
-                                <div className={cn(
-                                  "relative w-14 h-14 rounded-xl border flex items-center justify-center transition-all duration-300",
-                                  "bg-gradient-to-br", statusConfig.gradient,
-                                  statusConfig.color.includes('border-') ? statusConfig.color.split(' ').find(c => c.includes('border-')) : "border-brand-gray-700"
-                                )}>
-                                  <StatusIcon className={cn(
-                                    "w-7 h-7 transition-all duration-300",
-                                    creative.status === 'processing' && 'animate-spin',
-                                    creative.status === 'completed' && 'text-brand-neon-green',
-                                    creative.status === 'failed' && 'text-red-400',
-                                    creative.status === 'processing' && 'text-yellow-400',
-                                    creative.status === 'queued' && 'text-blue-400',
-                                    creative.status === 'draft' && 'text-brand-gray-400'
-                                  )} />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              
-                              {/* Header */}
-                              <div className="flex items-center space-x-3 mb-3">
-                                <h3 className="text-xl font-semibold text-white truncate group-hover:text-brand-neon-green transition-colors duration-300">
-                                  {creative.title}
-                                </h3>
-                                
-                                <Badge className={cn("text-xs font-medium", statusConfig.color)}>
-                                  {statusConfig.label}
-                                </Badge>
-                                
-                                <Badge className="bg-brand-gray-700/50 text-brand-gray-300 border-brand-gray-600/50 text-xs">
-                                  {FORMAT_LABELS[creative.format as keyof typeof FORMAT_LABELS] || creative.format}
-                                </Badge>
-                              </div>
-
-                              {/* Description */}
-                              <p className="text-brand-gray-400 text-sm mb-4 line-clamp-2 leading-relaxed">
-                                {creative.prompt}
-                              </p>
-
-                              {/* Progress Bar */}
-                              <div className="mb-4">
-                                <div className="flex items-center justify-between text-xs text-brand-gray-400 mb-2">
-                                  <span className="font-medium">{statusConfig.description}</span>
-                                  <span className="font-mono">{progress}%</span>
-                                </div>
-                                <div className="relative">
-                                  <Progress 
-                                    value={progress} 
-                                    className="h-2 bg-brand-gray-800/50"
-                                  />
-                                  {creative.status === 'processing' && (
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent h-2 rounded-full animate-pulse"></div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Metadata */}
-                              <div className="flex items-center space-x-4 text-xs text-brand-gray-500 mb-3">
-                                <div className="flex items-center space-x-1">
-                                  <Calendar className="w-3 h-3" />
-                                  <span>
-                                    {new Date(creative.created_at).toLocaleDateString('pt-BR', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      year: 'numeric'
-                                    })}
-                                  </span>
-                                </div>
-                                
-                                {latestJob && (
-                                  <>
-                                    <span>•</span>
-                                    <span>Tentativas: {latestJob.attempts}</span>
-                                    
-                                    {latestJob.processing_started_at && (
-                                      <>
-                                        <span>•</span>
-                                        <span>
-                                          Iniciado: {new Date(latestJob.processing_started_at).toLocaleTimeString('pt-BR', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })}
-                                        </span>
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Error Message */}
-                              {creative.status === 'failed' && creative.error_message && (
-                                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg backdrop-blur-sm">
-                                  <div className="flex items-start space-x-3">
-                                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                    <div className="text-red-400 text-sm">
-                                      <div className="font-semibold mb-1">Erro no processamento:</div>
-                                      <div className="text-red-300 leading-relaxed">{creative.error_message}</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center space-x-2 flex-shrink-0 ml-6">
-                          {creative.status === 'completed' && creative.result_url && (
-                            <>
-                              <Button
-                                className="btn-ghost h-10 w-10 p-0 hover:bg-brand-neon-green/10 hover:text-brand-neon-green transition-all duration-300"
-                                onClick={() => setPreviewCreative(creative)}
-                                title="Visualizar criativo"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              
-                              <Button
-                                className="btn-ghost h-10 w-10 p-0 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-300"
-                                onClick={() => handleSmartDownload(creative)}
-                                title="Baixar criativo"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-
-                          {creative.status === 'failed' && (
-                            <Button
-                              className="btn-ghost h-10 w-10 p-0 hover:bg-yellow-500/10 hover:text-yellow-400 transition-all duration-300"
-                              onClick={() => handleReprocess(creative.id)}
-                              title="Reprocessar criativo"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
-                          )}
-
-                          {(creative.status === 'draft' || creative.status === 'failed') && (
-                            <Button
-                              className="btn-ghost h-10 w-10 p-0 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300"
-                              onClick={() => {
-                                if (confirm(`Tem certeza que deseja excluir "${creative.title}"?`)) {
-                                  handleDelete(creative.id);
-                                }
-                              }}
-                              title="Excluir criativo"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
             </>
           )}
         </div>
 
         {/* Footer Info */}
-        {(filteredRequests.length + filteredCreatives.length) > 0 && (
+        {allItems.length > 0 && (
           <Card className="card-glass-intense border-brand-gray-700/50 mt-8">
             <CardContent className="p-4">
               <div className="flex items-center justify-center space-x-6 text-sm text-brand-gray-400">
@@ -1032,15 +1026,15 @@ export default function QueuePage() {
                   <span>Dashboard em tempo real</span>
                 </div>
                 <span>•</span>
-                <span>{filteredRequests.length + filteredCreatives.length} de {stats.total} criativos exibidos</span>
+                <span>{allItems.length} de {stats.total} criativos exibidos</span>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Modal de Preview */}
+        {/* Preview Modal */}
         {previewCreative && (
-          <CreativePreviewModal
+          <CreativePreviewModal 
             creative={previewCreative}
             isOpen={!!previewCreative}
             onClose={() => setPreviewCreative(null)}

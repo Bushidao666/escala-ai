@@ -9,11 +9,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Se o usuário estiver logado e tentar acessar a página inicial, redirecione para a galeria
-  if (user && request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/gallery', request.url))
-  }
-
   // Se o usuário não estiver logado e tentar acessar uma rota protegida, redirecione para a página inicial
   if (
     !user &&

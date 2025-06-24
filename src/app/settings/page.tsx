@@ -40,10 +40,17 @@ import { saveSettings, restoreDefaults, getUserSettings, testOpenAiConnection } 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { settingsSchema, type SettingsFormData, defaultSettings } from "@/lib/schemas/settings";
+import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
+import { createClient } from "@/lib/supabase/client";
 
 type ConnectionStatus = 'idle' | 'testing' | 'success' | 'error';
 
+// Defina handlers e config como constantes estáveis fora do componente
+const realtimeHandlers = {};
+const realtimeConfig = { enabled: true };
+
 export default function SettingsPage() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -51,6 +58,19 @@ export default function SettingsPage() {
   const [connectionError, setConnectionError] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
+
+  // Fetch user ID for realtime connection
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null);
+    };
+    fetchUser();
+  }, []);
+
+  // Establish realtime connection with stable props
+  useSupabaseRealtime(userId, realtimeHandlers, realtimeConfig);
 
   const form = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
@@ -81,7 +101,6 @@ export default function SettingsPage() {
             retries: settings.retries || 3,
             theme: settings.theme || "dark",
             language: settings.language || "pt-BR",
-            enable_auto_refresh: settings.enable_auto_refresh ?? true,
           };
           reset(formattedSettings);
         }
@@ -516,35 +535,6 @@ export default function SettingsPage() {
                             <Switch
                               checked={field.value === "dark"}
                               onCheckedChange={(checked) => field.onChange(checked ? "dark" : "light")}
-                            />
-                          </FormControl>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="enable_auto_refresh"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center justify-between p-6">
-                          <div className="flex items-center space-x-4">
-                            <RefreshCw className="w-6 h-6 text-brand-neon-green" />
-                            <div>
-                              <FormLabel className="text-white font-medium text-base">
-                                Atualização Automática
-                              </FormLabel>
-                              <p className="text-sm text-brand-gray-500">
-                                Atualiza automaticamente o status dos criativos.
-                              </p>
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
                             />
                           </FormControl>
                         </div>

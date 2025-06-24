@@ -12,7 +12,6 @@ export const settingsSchema = z.object({
   retries: z.number().int().min(0).max(5),
   theme: z.enum(["dark", "light"]),
   language: z.enum(["pt-BR", "en-US"]),
-  enable_auto_refresh: z.boolean(),
 });
 
 export type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -29,5 +28,4 @@ export const defaultSettings: SettingsFormData = {
   retries: 3,
   theme: "dark",
   language: "pt-BR",
-  enable_auto_refresh: true,
 }; 

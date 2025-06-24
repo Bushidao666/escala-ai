@@ -975,4 +975,143 @@ export async function deleteCreativeRequest(requestId: string) {
   revalidatePath("/gallery");
 
   return { success: true };
+}
+
+/**
+ * 🆕 FUNÇÃO DE CORREÇÃO: Corrige requests com status incorreto
+ * Verifica todos os requests do usuário e corrige os que têm status inconsistente
+ */
+export async function fixInconsistentRequestStatuses() {
+  console.log("\n--- [🔧 ACTION START: fixInconsistentRequestStatuses] ---");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  console.log(`User ID: ${user.id}`);
+
+  // Busca todos os requests do usuário com seus criativos
+  const { data: requests, error } = await supabase
+    .from("creative_requests")
+    .select(`
+      id,
+      title,
+      status,
+      creatives (id, status)
+    `)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Error fetching requests:", error);
+    throw new Error("Não foi possível buscar as solicitações.");
+  }
+
+  if (!requests || requests.length === 0) {
+    return { success: true, message: "Nenhuma solicitação encontrada." };
+  }
+
+  console.log(`Found ${requests.length} requests to check`);
+
+  let correctedCount = 0;
+  const corrections = [];
+
+  for (const request of requests) {
+    const creatives = request.creatives as any[];
+    
+    if (!creatives || creatives.length === 0) {
+      console.log(`Request ${request.id} has no creatives, skipping`);
+      continue;
+    }
+
+    // Calcula status correto
+    const total = creatives.length;
+    const completed = creatives.filter(c => c.status === 'completed').length;
+    const failed = creatives.filter(c => c.status === 'failed').length;
+    const processing = creatives.filter(c => c.status === 'processing').length;
+    const queued = creatives.filter(c => c.status === 'queued').length;
+
+    let correctStatus: 'pending' | 'processing' | 'completed' | 'partial' | 'failed';
+
+    if (failed === total) {
+      correctStatus = 'failed';
+    } else if (completed === total) {
+      correctStatus = 'completed';
+    } else if (completed > 0 && failed > 0 && (completed + failed) === total) {
+      correctStatus = 'partial';
+    } else if (processing > 0 || queued > 0) {
+      correctStatus = 'processing';
+    } else {
+      correctStatus = 'pending';
+    }
+
+    // Verifica se precisa corrigir
+    if (request.status !== correctStatus) {
+      console.log(`🔧 Correcting request ${request.id}: ${request.status} -> ${correctStatus}`);
+      console.log(`   Status breakdown: completed=${completed}, failed=${failed}, processing=${processing}, queued=${queued}, total=${total}`);
+
+      const { error: updateError } = await supabase
+        .from("creative_requests")
+        .update({
+          status: correctStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", request.id);
+
+      if (updateError) {
+        console.error(`Failed to update request ${request.id}:`, updateError);
+        corrections.push({
+          requestId: request.id,
+          title: request.title,
+          error: updateError.message
+        });
+      } else {
+        correctedCount++;
+        corrections.push({
+          requestId: request.id,
+          title: request.title,
+          oldStatus: request.status,
+          newStatus: correctStatus,
+          breakdown: { completed, failed, processing, queued, total }
+        });
+      }
+    } else {
+      console.log(`✅ Request ${request.id} status is correct: ${request.status}`);
+    }
+  }
+
+  console.log(`Fixed ${correctedCount} requests with inconsistent status`);
+  console.log("--- [🔧 ACTION END: fixInconsistentRequestStatuses] ---\n");
+
+  revalidatePath("/queue");
+  revalidatePath("/gallery");
+
+  return { 
+    success: true, 
+    correctedCount,
+    corrections,
+    message: `${correctedCount} solicitação(ões) corrigida(s).`
+  };
+}
+
+/**
+ * 🆕 FUNÇÃO INTELIGENTE: Monitora e corrige status de um request específico
+ * Esta função pode ser chamada pelo realtime quando detectar mudanças
+ */
+export async function smartUpdateRequestStatus(requestId: string) {
+  console.log(`\n--- [🧠 ACTION START: smartUpdateRequestStatus] ---`);
+  console.log(`Request ID: ${requestId}`);
+
+  try {
+    await updateCreativeRequestStatus(requestId);
+    revalidatePath("/queue");
+    revalidatePath("/gallery");
+    return { success: true };
+  } catch (error: any) {
+    console.error("smartUpdateRequestStatus error:", error);
+    return { success: false, error: error.message };
+  } finally {
+    console.log("--- [🧠 ACTION END: smartUpdateRequestStatus] ---\n");
+  }
 } 

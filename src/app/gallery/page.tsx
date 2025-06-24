@@ -2,7 +2,6 @@
 
 import { 
   GalleryVertical, 
-  Frown, 
   Grid3X3, 
   LayoutGrid, 
   List, 
@@ -13,7 +12,6 @@ import {
   Trash2, 
   Eye, 
   Heart, 
-  Share2,
   Sparkles,
   Zap,
   Palette,
@@ -22,24 +20,13 @@ import {
   TrendingUp,
   X,
   ChevronDown,
-  MoreHorizontal,
   RefreshCw,
   Plus,
   Settings,
   Star,
-  Bookmark,
-  Copy,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
-  Maximize2,
-  Minimize2,
-  RotateCw,
-  Archive,
-  FolderPlus,
   Layers2,
-  MousePointer,
-  Keyboard,
   Sliders
 } from "lucide-react";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -47,7 +34,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   Select,
   SelectContent,
@@ -57,27 +44,14 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { getCreativesForGallery } from "@/app/gallery/actions";
 import { deleteCreative } from "@/app/new/actions";
 import { type GalleryFilters } from "./gallery.types";
 import { CreativeLightbox } from "./CreativeLightbox";
-import { CreativeRequestGalleryCard } from "./CreativeRequestGalleryCard";
+import { UnifiedGalleryCard } from "./UnifiedGalleryCard";
 
-// Type for lightbox compatibility
-type CreativeForLightbox = {
-  id: string;
-  title: string;
-  prompt: string;
-  result_url: string | null;
-  status: string;
-  style?: string | null;
-  primary_color?: string | null;
-  secondary_color?: string | null;
-  format?: string | null;
-  error_message?: string | null;
-};
+
 import { FORMAT_LABELS } from "@/lib/schemas/creative";
 
 interface Creative {
@@ -146,386 +120,7 @@ function SearchSuggestions({
   );
 }
 
-// Premium Creative Card Component
-function PremiumCreativeCard({ 
-  creative, 
-  isSelected, 
-  onSelectionChange, 
-  onCardClick,
-  viewMode,
-  favorites,
-  onToggleFavorite
-}: { 
-  creative: Creative;
-  isSelected: boolean;
-  onSelectionChange: (id: string) => void;
-  onCardClick: () => void;
-  viewMode: ViewMode;
-  favorites: string[];
-  onToggleFavorite: (id: string) => void;
-}) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const isFavorited = favorites.includes(creative.id);
 
-  const handleImageLoad = () => setIsLoaded(true);
-  const handleImageError = () => {
-    setIsLoaded(true);
-    setIsError(true);
-  };
-
-  if (viewMode === 'list') {
-    return (
-      <Card className="card-glass-intense border-brand-gray-700/30 hover:border-brand-neon-green/50 transition-all duration-500 group relative overflow-hidden cursor-pointer"
-        onClick={onCardClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Premium Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-neon-green/3 via-transparent to-cyan-400/3 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        
-        <CardContent className="relative p-6">
-          <div className="flex items-center space-x-6">
-            
-            {/* Enhanced Selection Checkbox */}
-            <div className="flex-shrink-0 relative" onClick={(e) => e.stopPropagation()}>
-              <div className={cn(
-                "absolute inset-0 rounded-xl transition-all duration-300",
-                isSelected ? "bg-brand-neon-green/20 scale-110 blur-sm" : ""
-              )}></div>
-              <button
-                onClick={() => onSelectionChange(creative.id)}
-                className={cn(
-                  "relative w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-300 hover:scale-105",
-                  isSelected 
-                    ? "bg-brand-neon-green border-brand-neon-green shadow-lg shadow-brand-neon-green/30" 
-                    : "bg-brand-gray-800/50 border-brand-gray-600 hover:border-brand-neon-green/50 backdrop-blur-sm"
-                )}
-              >
-                {isSelected && <div className="w-4 h-4 bg-brand-black rounded-lg" />}
-              </button>
-            </div>
-
-            {/* Enhanced Image Preview with Epic Effects */}
-            <div className="relative w-24 h-24 flex-shrink-0 group/image">
-              {/* Multi-layer Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-brand-neon-green/30 via-cyan-400/20 to-purple-500/20 rounded-2xl blur-lg opacity-0 group-hover/image:opacity-100 transition-opacity duration-500"></div>
-              <div className="absolute inset-0 bg-brand-neon-green/20 rounded-2xl blur opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"></div>
-              
-              <div className="relative w-full h-full rounded-2xl overflow-hidden border border-brand-gray-700/50 group-hover/image:border-brand-neon-green/50 transition-all duration-300">
-                {!isLoaded && !isError && (
-                  <div className="w-full h-full bg-gradient-to-br from-brand-gray-800 to-brand-gray-900 animate-pulse flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-brand-gray-600 animate-spin" />
-                  </div>
-                )}
-                
-                {isError ? (
-                  <div className="w-full h-full bg-gradient-to-br from-brand-gray-800 to-brand-gray-900 flex items-center justify-center">
-                    <Eye className="w-8 h-8 text-brand-gray-600" />
-                  </div>
-                ) : (
-                  <img
-                    src={creative.result_url || ''}
-                    alt={creative.title}
-                    className={cn(
-                      "w-full h-full object-cover transition-all duration-500",
-                      isLoaded ? 'opacity-100' : 'opacity-0',
-                      isHovered && "scale-110"
-                    )}
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                  />
-                )}
-              </div>
-              
-              {/* Epic Status Indicator */}
-              <div className="absolute -top-2 -right-2 z-10">
-                <div className={cn(
-                  "w-6 h-6 rounded-full border-3 border-brand-gray-900 shadow-xl flex items-center justify-center",
-                  creative.status === 'completed' && "bg-gradient-to-br from-green-400 to-green-600",
-                  creative.status === 'processing' && "bg-gradient-to-br from-yellow-400 to-orange-500 animate-pulse",
-                  creative.status === 'failed' && "bg-gradient-to-br from-red-400 to-red-600",
-                  creative.status === 'draft' && "bg-gradient-to-br from-gray-400 to-gray-600"
-                )}>
-                  {creative.status === 'completed' && <span className="text-xs">✓</span>}
-                  {creative.status === 'processing' && <Zap className="w-3 h-3 text-white" />}
-                  {creative.status === 'failed' && <span className="text-xs">✗</span>}
-                  {creative.status === 'draft' && <span className="text-xs">📝</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Content Section */}
-            <div className="flex-1 min-w-0 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-bold text-xl truncate group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-brand-neon-green group-hover:to-cyan-400 group-hover:bg-clip-text transition-all duration-300">
-                    {creative.title}
-                  </h3>
-                  <p className="text-brand-gray-300 text-base truncate mt-1 leading-relaxed group-hover:text-brand-gray-200 transition-colors duration-300">
-                    {creative.prompt}
-                  </p>
-                </div>
-                
-                {/* Color Palette Preview */}
-                {(creative.primary_color || creative.secondary_color) && (
-                  <div className="flex items-center space-x-1 ml-4">
-                    {creative.primary_color && (
-                      <div 
-                        className="w-5 h-5 rounded-full border-2 border-white/20 shadow-lg hover:scale-110 transition-transform duration-200"
-                        style={{ backgroundColor: creative.primary_color }}
-                        title={`Cor primária: ${creative.primary_color}`}
-                      />
-                    )}
-                    {creative.secondary_color && (
-                      <div 
-                        className="w-5 h-5 rounded-full border-2 border-white/20 shadow-lg hover:scale-110 transition-transform duration-200"
-                        style={{ backgroundColor: creative.secondary_color }}
-                        title={`Cor secundária: ${creative.secondary_color}`}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              {/* Enhanced Metadata */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Badge className={cn(
-                    "text-xs font-medium px-3 py-1.5 border transition-all duration-300",
-                    creative.status === 'completed' && "bg-green-500/20 text-green-400 border-green-500/30",
-                    creative.status === 'processing' && "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-                    creative.status === 'failed' && "bg-red-500/20 text-red-400 border-red-500/30",
-                    creative.status === 'draft' && "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                  )}>
-                    {creative.status === 'completed' && '✅ Completo'}
-                    {creative.status === 'processing' && '⚡ Processando'}
-                    {creative.status === 'failed' && '❌ Falhou'}
-                    {creative.status === 'draft' && '📝 Rascunho'}
-                  </Badge>
-                  
-                  <div className="flex items-center space-x-2 text-sm text-brand-gray-400">
-                    <span className="bg-brand-gray-800/60 px-3 py-1 rounded-lg border border-brand-gray-700/50 hover:border-brand-neon-green/30 transition-colors duration-300">
-                      📐 {FORMAT_LABELS[creative.format as keyof typeof FORMAT_LABELS]}
-                    </span>
-                    <span className="bg-brand-gray-800/60 px-3 py-1 rounded-lg border border-brand-gray-700/50 hover:border-brand-neon-green/30 transition-colors duration-300">
-                      🎨 {creative.style}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="text-xs text-brand-gray-500">
-                  {new Date(creative.created_at).toLocaleDateString('pt-BR')}
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Action Buttons */}
-            <div className="flex-shrink-0 flex items-center space-x-2">
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                                      onToggleFavorite(creative.id);
-                }}
-                className={cn(
-                  "btn-ghost w-12 h-12 p-0 transition-all duration-300 group/btn",
-                  favorites.includes(creative.id)
-                    ? "bg-pink-500/20 text-pink-400 hover:bg-pink-500/30"
-                    : "hover:bg-pink-500/10 hover:text-pink-400"
-                )}
-                title={favorites.includes(creative.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-              >
-                <Heart className={cn(
-                  "w-5 h-5 group-hover/btn:scale-110 transition-all duration-200",
-                  favorites.includes(creative.id) && "fill-current"
-                )} />
-              </Button>
-              
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCardClick();
-                }}
-                className="btn-ghost w-12 h-12 p-0 hover:bg-brand-neon-green/10 hover:text-brand-neon-green transition-all duration-300 group/btn border border-brand-gray-700/50 hover:border-brand-neon-green/50"
-                title="Visualizar"
-              >
-                <Eye className="w-5 h-5 group-hover/btn:scale-110 transition-transform duration-200" />
-              </Button>
-              
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Share logic
-                }}
-                className="btn-ghost w-12 h-12 p-0 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-300 group/btn"
-                title="Compartilhar"
-              >
-                <Share2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform duration-200" />
-              </Button>
-              
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // More actions
-                }}
-                className="btn-ghost w-12 h-12 p-0 hover:bg-brand-gray-700/50 transition-all duration-300 group/btn"
-                title="Mais opções"
-              >
-                <MoreHorizontal className="w-5 h-5 group-hover/btn:scale-110 transition-transform duration-200" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div 
-      className={cn(
-        "relative group rounded-xl overflow-hidden border bg-brand-gray-900/50 transition-all duration-500 cursor-pointer",
-        "hover:scale-[1.02] hover:shadow-2xl hover:shadow-brand-neon-green/20",
-        isSelected ? "border-brand-neon-green ring-2 ring-brand-neon-green/30" : "border-brand-gray-700/50 hover:border-brand-neon-green/50",
-        viewMode === 'masonry' ? "break-inside-avoid mb-8 xl:mb-10 2xl:mb-12" : "aspect-square"
-      )}
-      onClick={onCardClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Selection Checkbox */}
-      <div 
-        className={cn(
-          "absolute top-3 left-3 z-30 transition-all duration-300",
-          isSelected ? "opacity-100 scale-100" : "opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={() => onSelectionChange(creative.id)}
-          className={cn(
-            "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300",
-            isSelected 
-              ? "bg-brand-neon-green border-brand-neon-green" 
-              : "bg-black/50 border-white/30 hover:border-brand-neon-green/50"
-          )}
-        >
-          {isSelected && <div className="w-3 h-3 bg-brand-black rounded-sm" />}
-        </button>
-      </div>
-
-      {/* Quick Actions */}
-      <div className={cn(
-        "absolute top-3 right-3 z-30 flex space-x-1 transition-all duration-300",
-        isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-      )}>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(creative.id);
-          }}
-          className="w-8 h-8 bg-black/50 hover:bg-pink-500/20 rounded-lg flex items-center justify-center transition-colors"
-          title={isFavorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-        >
-          <Heart 
-            className={cn(
-              "w-4 h-4 transition-all duration-300",
-              isFavorited 
-                ? "text-pink-500 fill-pink-500" 
-                : "text-white hover:text-pink-400"
-            )}
-            style={{
-              transform: isFavorited ? 'scale(1.1)' : 'scale(1)',
-            }}
-          />
-        </button>
-        <button className="w-8 h-8 bg-black/50 hover:bg-blue-500/20 rounded-lg flex items-center justify-center transition-colors">
-          <Share2 className="w-4 h-4 text-white hover:text-blue-400" />
-        </button>
-      </div>
-
-      {/* Image Container */}
-      <div className="relative overflow-hidden">
-        {!isLoaded && (
-          <div className={cn(
-            "w-full bg-brand-gray-800 animate-pulse flex items-center justify-center",
-            viewMode === 'masonry' ? "h-64" : "h-full absolute inset-0"
-          )}>
-            <Sparkles className="w-8 h-8 text-brand-gray-600" />
-          </div>
-        )}
-        
-        {isError ? (
-          <div className={cn(
-            "w-full flex flex-col items-center justify-center text-center p-8 bg-brand-gray-800/50",
-            viewMode === 'masonry' ? "h-64" : "h-full absolute inset-0"
-          )}>
-            <Eye className="w-12 h-12 text-brand-gray-600 mb-2" />
-            <p className="text-sm text-red-400">Erro ao carregar</p>
-          </div>
-        ) : (
-          <img
-            src={creative.result_url || ''}
-            alt={creative.title}
-            className={cn(
-              "w-full object-cover transition-all duration-700",
-              isLoaded ? 'opacity-100' : 'opacity-0',
-              isHovered && "scale-110",
-              viewMode === 'masonry' ? "h-auto" : "h-full"
-            )}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            loading="lazy"
-          />
-        )}
-      </div>
-      
-      {/* Overlay with Premium Effects */}
-      <div className={cn(
-        "absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent transition-all duration-500",
-        isHovered ? "opacity-100" : "opacity-0"
-      )}>
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h3 className="text-white font-bold text-lg mb-1 truncate">
-            {creative.title}
-          </h3>
-          <p className="text-brand-gray-300 text-sm line-clamp-2 mb-3">
-            {creative.prompt}
-          </p>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-brand-neon-green/20 text-brand-neon-green border-brand-neon-green/30 text-xs">
-                {FORMAT_LABELS[creative.format as keyof typeof FORMAT_LABELS]}
-              </Badge>
-              {creative.primary_color && (
-                <div 
-                  className="w-4 h-4 rounded-full border border-white/30"
-                  style={{ backgroundColor: creative.primary_color }}
-                />
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-1">
-              <span className="text-brand-gray-400 text-xs">
-                {new Date(creative.created_at).toLocaleDateString('pt-BR')}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Masonry Layout Component
-function MasonryGrid({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="columns-1 lg:columns-2 xl:columns-3 2xl:columns-4 gap-8 xl:gap-10 2xl:gap-12">
-      {children}
-    </div>
-  );
-}
 
 // Epic Premium Sidebar Component
 function PremiumControlSidebar({
@@ -583,58 +178,223 @@ function PremiumControlSidebar({
 }) {
   return (
     <div className={cn(
-      "fixed top-0 right-0 h-screen bg-brand-gray-900/95 backdrop-blur-xl border-l border-brand-gray-700/50 transition-all duration-500 z-40 overflow-hidden",
+      "sidebar-glass fixed top-0 right-0 h-screen bg-brand-black/60 backdrop-blur-xl border-l border-brand-gray-800/60 transition-all duration-300 ease-in-out shadow-2xl shadow-black/20 z-40 overflow-hidden overflow-x-hidden",
       sidebarCollapsed 
-        ? "w-16" 
-        : "w-80 xl:w-96 2xl:w-[420px]"
+        ? "w-20 min-w-20" 
+        : "w-80 min-w-80 xl:w-96 xl:min-w-96 2xl:w-[420px] 2xl:min-w-[420px]"
     )}>
-      {/* Epic Multi-layer Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-brand-neon-green/5 via-transparent to-cyan-400/5"></div>
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-gray-900/50 to-brand-gray-900/80"></div>
+      {/* Epic Multi-layer Background - Matching Navigation Sidebar */}
       
       {/* Sidebar Content */}
       <div className="relative h-full flex flex-col">
         
         {/* Sidebar Header */}
-        <div className="p-6 border-b border-brand-gray-700/50">
-          <div className="flex items-center justify-between">
-            {!sidebarCollapsed && (
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold text-transparent bg-gradient-to-r from-brand-neon-green to-cyan-400 bg-clip-text">
-                  Controles
-                </h2>
-                <p className="text-brand-gray-400 text-sm">
-                  Busca, filtros e configurações
-                </p>
+        <div className={cn(
+          "border-b border-brand-gray-800/40 backdrop-blur-sm",
+          sidebarCollapsed ? "p-4" : "p-6"
+        )}>
+          {sidebarCollapsed ? (
+            /* Minimized Header Layout */
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-brand-neon-green/30 rounded-2xl blur-xl animate-glow-pulse group-hover:bg-brand-neon-green/40 transition-colors duration-300"></div>
+                <div className="relative bg-gradient-to-br from-brand-neon-green via-brand-neon-green to-brand-neon-green-dark p-3 rounded-2xl shadow-lg shadow-brand-neon-green/25 border border-brand-neon-green/20 group-hover:scale-105 transition-transform duration-200">
+                  <Sliders className="w-6 h-6 text-brand-black drop-shadow-sm" />
+                </div>
               </div>
-            )}
-            
-            {/* Enhanced Toggle Button */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-brand-neon-green/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* Control Indicator for Minimized State */}
+              <div className="relative group">
+                <div className="w-10 h-10 bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-xl flex items-center justify-center border border-white/20 shadow-lg shadow-black/10 hover:bg-white/15 hover:border-white/30 transition-all duration-200 hover:scale-105 cursor-pointer">
+                  <Filter className="w-5 h-5 text-brand-neon-green" />
+                </div>
+                {/* Tooltip for controls info */}
+                <div className="fixed right-24 top-1/2 transform -translate-y-1/2 bg-brand-black/95 text-white text-sm rounded-xl px-4 py-3 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-300 backdrop-blur-xl border border-brand-gray-600/60 shadow-2xl shadow-black/40 z-[9999] min-w-max">
+                  <div className="relative">
+                    <p className="font-semibold text-white">Controles da Galeria</p>
+                    <p className="text-xs text-brand-gray-400 mt-1">Busca, filtros e configurações</p>
+                  </div>
+                  {/* Mini-modal arrow */}
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-8 border-transparent border-l-brand-black/95"></div>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-l from-brand-neon-green/10 to-transparent rounded-xl opacity-50"></div>
+                </div>
+              </div>
+              
+              {/* Toggle Button for Minimized State */}
               <Button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="relative btn-ghost w-10 h-10 p-0 hover:bg-brand-neon-green/10 hover:text-brand-neon-green transition-all duration-300 border border-brand-gray-700/50 hover:border-brand-neon-green/50"
-                title={sidebarCollapsed ? "Expandir controles (Clique ou ⌘+B)" : "Recolher controles (Clique ou ⌘+B)"}
+                size="sm"
+                variant="ghost"
+                className="text-brand-gray-400 hover:text-white hover:bg-white/15 p-2.5 rounded-xl w-10 h-10 transition-all duration-200 hover:scale-105 border border-transparent hover:border-white/20 shadow-sm hover:shadow-lg hover:shadow-black/20"
+                title="Expandir controles (Clique ou ⌘+B)"
               >
-                {sidebarCollapsed ? (
-                  <ChevronLeft className="w-5 h-5 animate-pulse" />
-                ) : (
-                  <ChevronRight className="w-5 h-5" />
-                )}
+                <ChevronLeft className="w-4 h-4" />
               </Button>
             </div>
-          </div>
+          ) : (
+            /* Expanded Header Layout */
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-brand-neon-green/30 rounded-2xl blur-xl animate-glow-pulse group-hover:bg-brand-neon-green/40 transition-colors duration-300"></div>
+                  <div className="relative bg-gradient-to-br from-brand-neon-green via-brand-neon-green to-brand-neon-green-dark p-3.5 rounded-2xl shadow-lg shadow-brand-neon-green/25 border border-brand-neon-green/20">
+                    <Sliders className="w-7 h-7 text-brand-black drop-shadow-sm" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <h1 className="text-xl font-bold leading-none">
+                    <span className="text-gradient-neon">Controles</span>{" "}
+                    <span className="text-white">Pro</span>
+                  </h1>
+                  <p className="text-brand-gray-400 text-sm font-medium leading-none">
+                    Busca, filtros e configurações
+                  </p>
+                </div>
+              </div>
+              
+              {/* Toggle Button for Expanded State */}
+              <Button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                size="sm"
+                variant="ghost"
+                className="text-brand-gray-400 hover:text-white hover:bg-white/10 p-2.5 rounded-xl transition-all duration-200 hover:scale-105"
+                title="Recolher controles (Clique ou ⌘+B)"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
+
+        {/* Minimized Sidebar Indicators */}
+        {sidebarCollapsed && (
+          <nav className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-6">
+              {/* Minimized navigation title indicator */}
+              <div className="flex justify-center mb-2">
+                <div className="w-8 h-0.5 bg-gradient-to-r from-transparent via-brand-gray-600 to-transparent rounded-full"></div>
+              </div>
+              
+              {/* Search Quick Access */}
+              <div className="relative group">
+                <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-xl flex items-center justify-center border border-white/20 shadow-lg shadow-black/10 hover:bg-white/15 hover:border-white/30 transition-all duration-200 hover:scale-105 cursor-pointer mx-auto">
+                  <Search className="w-5 h-5 text-brand-neon-green" />
+                </div>
+                {/* Mini-modal tooltip */}
+                <div className="fixed right-24 top-1/2 transform -translate-y-1/2 bg-brand-black/95 text-white text-sm rounded-xl px-5 py-4 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-300 backdrop-blur-xl border border-brand-gray-600/60 shadow-2xl shadow-black/40 z-[9999] min-w-max">
+                  <div className="relative space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-brand-neon-green/20 to-brand-neon-green/10 border border-brand-neon-green/30">
+                        <Search className="w-4 h-4 text-brand-neon-green" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">Busca Inteligente</p>
+                        <p className="text-xs text-brand-gray-400">Pesquisar criativos</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mini-modal arrow */}
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-8 border-transparent border-l-brand-black/95"></div>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-l from-brand-neon-green/10 to-transparent rounded-xl opacity-50"></div>
+                </div>
+              </div>
+
+              {/* View Mode Quick Access */}
+              <div className="relative group">
+                <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-xl flex items-center justify-center border border-white/20 shadow-lg shadow-black/10 hover:bg-white/15 hover:border-white/30 transition-all duration-200 hover:scale-105 cursor-pointer mx-auto">
+                  <LayoutGrid className="w-5 h-5 text-brand-neon-green" />
+                </div>
+                {/* Mini-modal tooltip */}
+                <div className="fixed right-24 top-1/2 transform -translate-y-1/2 bg-brand-black/95 text-white text-sm rounded-xl px-5 py-4 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-300 backdrop-blur-xl border border-brand-gray-600/60 shadow-2xl shadow-black/40 z-[9999] min-w-max">
+                  <div className="relative space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-brand-neon-green/20 to-brand-neon-green/10 border border-brand-neon-green/30">
+                        <LayoutGrid className="w-4 h-4 text-brand-neon-green" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">Visualização</p>
+                        <p className="text-xs text-brand-gray-400">Modos de exibição</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mini-modal arrow */}
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-8 border-transparent border-l-brand-black/95"></div>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-l from-brand-neon-green/10 to-transparent rounded-xl opacity-50"></div>
+                </div>
+              </div>
+
+              {/* Filters Quick Access */}
+              <div className="relative group">
+                <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-xl flex items-center justify-center border border-white/20 shadow-lg shadow-black/10 hover:bg-white/15 hover:border-white/30 transition-all duration-200 hover:scale-105 cursor-pointer mx-auto">
+                  <Filter className="w-5 h-5 text-brand-neon-green" />
+                </div>
+                {/* Mini-modal tooltip */}
+                <div className="fixed right-24 top-1/2 transform -translate-y-1/2 bg-brand-black/95 text-white text-sm rounded-xl px-5 py-4 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-300 backdrop-blur-xl border border-brand-gray-600/60 shadow-2xl shadow-black/40 z-[9999] min-w-max">
+                  <div className="relative space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-brand-neon-green/20 to-brand-neon-green/10 border border-brand-neon-green/30">
+                        <Filter className="w-4 h-4 text-brand-neon-green" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">Filtros Avançados</p>
+                        <p className="text-xs text-brand-gray-400">Status, formato e cores</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mini-modal arrow */}
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-8 border-transparent border-l-brand-black/95"></div>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-l from-brand-neon-green/10 to-transparent rounded-xl opacity-50"></div>
+                </div>
+              </div>
+
+              {/* Settings Quick Access */}
+              <div className="relative group">
+                <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-xl flex items-center justify-center border border-white/20 shadow-lg shadow-black/10 hover:bg-white/15 hover:border-white/30 transition-all duration-200 hover:scale-105 cursor-pointer mx-auto">
+                  <Settings className="w-5 h-5 text-brand-neon-green" />
+                </div>
+                {/* Mini-modal tooltip */}
+                <div className="fixed right-24 top-1/2 transform -translate-y-1/2 bg-brand-black/95 text-white text-sm rounded-xl px-5 py-4 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-300 backdrop-blur-xl border border-brand-gray-600/60 shadow-2xl shadow-black/40 z-[9999] min-w-max">
+                  <div className="relative space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-brand-neon-green/20 to-brand-neon-green/10 border border-brand-neon-green/30">
+                        <Settings className="w-4 h-4 text-brand-neon-green" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">Configurações</p>
+                        <p className="text-xs text-brand-gray-400">Modo preview e mais</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mini-modal arrow */}
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-8 border-transparent border-l-brand-black/95"></div>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-l from-brand-neon-green/10 to-transparent rounded-xl opacity-50"></div>
+                </div>
+              </div>
+            </div>
+          </nav>
+        )}
 
         {/* Sidebar Body */}
         {!sidebarCollapsed && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 animate-in slide-in-from-right-4 duration-300">
+          <div className={cn(
+            "flex-1 overflow-y-auto space-y-8 animate-in slide-in-from-right-4 duration-300",
+            sidebarCollapsed ? "p-4" : "p-5"
+          )}>
             
             {/* Search Section */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Search className="w-5 h-5 text-brand-neon-green" />
+              <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                Busca
+              </h2>
+              <div className="flex items-center space-x-3 group">
+                <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                  <Search className="w-4 h-4" />
+                </div>
                 <h3 className="text-lg font-semibold text-white">Busca Inteligente</h3>
               </div>
               
@@ -677,8 +437,13 @@ function PremiumControlSidebar({
 
             {/* Stats Section */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-brand-neon-green" />
+              <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                Estatísticas
+              </h2>
+              <div className="flex items-center space-x-3 group">
+                <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
                 <h3 className="text-lg font-semibold text-white">Estatísticas</h3>
               </div>
               
@@ -721,8 +486,13 @@ function PremiumControlSidebar({
 
             {/* View Mode Section */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <LayoutGrid className="w-5 h-5 text-brand-neon-green" />
+              <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                Visualização
+              </h2>
+              <div className="flex items-center space-x-3 group">
+                <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                  <LayoutGrid className="w-4 h-4" />
+                </div>
                 <h3 className="text-lg font-semibold text-white">Visualização</h3>
               </div>
               
@@ -770,8 +540,13 @@ function PremiumControlSidebar({
 
             {/* Sort Section */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <SortDesc className="w-5 h-5 text-brand-neon-green" />
+              <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                Ordenação
+              </h2>
+              <div className="flex items-center space-x-3 group">
+                <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                  <SortDesc className="w-4 h-4" />
+                </div>
                 <h3 className="text-lg font-semibold text-white">Ordenação</h3>
               </div>
               
@@ -792,9 +567,16 @@ function PremiumControlSidebar({
             {/* Advanced Filters Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Sliders className="w-5 h-5 text-brand-neon-green" />
-                  <h3 className="text-lg font-semibold text-white">Filtros</h3>
+                <div>
+                  <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                    Filtros
+                  </h2>
+                  <div className="flex items-center space-x-3 group">
+                    <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Filtros Avançados</h3>
+                  </div>
                 </div>
                 <Button
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -912,9 +694,14 @@ function PremiumControlSidebar({
 
             {/* Quick Actions Section */}
             {selectedIds.length > 0 && (
-              <div className="space-y-4 pt-4 border-t border-brand-gray-700/50">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-5 h-5 text-brand-neon-green" />
+              <div className="space-y-4 pt-4 border-t border-brand-gray-800/40">
+                <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                  Ações Rápidas
+                </h2>
+                <div className="flex items-center space-x-3 group">
+                  <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                    <Zap className="w-4 h-4" />
+                  </div>
                   <h3 className="text-lg font-semibold text-white">Ações Rápidas</h3>
                 </div>
                 
@@ -944,9 +731,14 @@ function PremiumControlSidebar({
             )}
 
             {/* Settings Section */}
-            <div className="space-y-4 pt-4 border-t border-brand-gray-700/50">
-              <div className="flex items-center space-x-2">
-                <Settings className="w-5 h-5 text-brand-neon-green" />
+            <div className="space-y-4 pt-4 border-t border-brand-gray-800/40">
+              <h2 className="text-xs font-bold text-brand-gray-500 uppercase tracking-wider mb-4 px-3">
+                Configurações
+              </h2>
+              <div className="flex items-center space-x-3 group">
+                <div className="relative rounded-lg transition-all duration-300 border shadow-sm p-2 bg-brand-gray-800/70 border-brand-gray-700/70 text-brand-gray-400 group-hover:bg-brand-gray-700/90 group-hover:border-brand-gray-600/90 group-hover:text-white">
+                  <Settings className="w-4 h-4" />
+                </div>
                 <h3 className="text-lg font-semibold text-white">Configurações</h3>
               </div>
               
@@ -1093,7 +885,7 @@ export default function GalleryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+
   const [previewMode, setPreviewMode] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -1643,34 +1435,18 @@ export default function GalleryPage() {
               viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" :
               "space-y-6"
             )}>
-              {creatives.map((item, index) => {
-                if (item.type === 'request') {
-                  return (
-                    <CreativeRequestGalleryCard
+              {creatives.map((item) => (
+                <UnifiedGalleryCard
                       key={item.id}
-                      request={item}
-                      onOpenLightbox={(creativeIndex) => openLightbox(item, creativeIndex)}
+                  item={item}
+                  viewMode={viewMode}
                       isSelected={selectedIds.includes(item.id)}
-                      onSelectionChange={() => handleSelectionChange(item.id)}
-                      onToggleFavorite={() => toggleFavorite(item.id)}
                       isFavorite={favorites.includes(item.id)}
-                    />
-                  );
-                }
-                // Se for 'creative'
-                return (
-                  <PremiumCreativeCard
-                    key={item.id}
-                    creative={item as Creative}
-                    isSelected={selectedIds.includes(item.id)}
-                    onSelectionChange={() => handleSelectionChange(item.id)}
-                    onCardClick={() => openLightbox(item)}
-                    viewMode={viewMode}
-                    favorites={favorites}
-                    onToggleFavorite={() => toggleFavorite(item.id)}
-                  />
-                );
-              })}
+                  onSelectionChange={(id) => handleSelectionChange(id)}
+                  onToggleFavorite={(id) => toggleFavorite(id)}
+                  onPreview={(selectedItem, creativeIndex) => openLightbox(selectedItem, creativeIndex)}
+                />
+              ))}
             </div>
           )}
           <div ref={loadMoreRef} className="h-10" />

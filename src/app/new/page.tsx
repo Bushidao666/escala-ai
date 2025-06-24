@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -59,16 +59,37 @@ import {
   // 🚀 NOVA IMPORTAÇÃO para requests multi-formato
   createCreativeRequest
 } from "./actions";
+import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
+import { createClient } from "@/lib/supabase/client";
+
+// Defina handlers e config como constantes estáveis fora do componente
+const realtimeHandlers = { onUpdate: () => {} };
+const realtimeConfig = { enabled: true };
 
 export default function NewCreativePage() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
   const [isFetchingDefaults, setIsFetchingDefaults] = useState(true);
   const [activeTab, setActiveTab] = useState("basic");
+  const [userDefaults, setUserDefaults] = useState<any>(null);
   
   // 🚀 NOVO: Estado para controlar modo de múltiplos formatos
   const [isMultiFormat, setIsMultiFormat] = useState(false);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(['1:1']);
+
+  // Fetch user ID for realtime connection
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null);
+    };
+    fetchUser();
+  }, []);
+
+  // Establish realtime connection with stable props
+  useSupabaseRealtime(userId, realtimeHandlers, realtimeConfig);
 
   const form = useForm<CreateCreativeData>({
     resolver: zodResolver(createCreativeSchema),
@@ -88,11 +109,13 @@ export default function NewCreativePage() {
     const fetchDefaults = async () => {
       try {
         const userDefaults = await getUserDefaults();
-        
-        setValue("quality", userDefaults.quality, { shouldValidate: false, shouldDirty: false });
-        setValue("output_format", userDefaults.output_format, { shouldValidate: false, shouldDirty: false });
-        setValue("output_compression", userDefaults.output_compression, { shouldValidate: false, shouldDirty: false });
-        setValue("background", userDefaults.background, { shouldValidate: false, shouldDirty: false });
+        // Combina os padrões do usuário com os padrões da aplicação
+        const combinedDefaults = {
+          ...defaultCreativeValues,
+          ...userDefaults,
+        };
+        // Reset o form com os valores combinados
+        reset(combinedDefaults);
       } catch (error) {
         console.error("Erro ao buscar configurações do usuário:", error);
       } finally {
@@ -101,7 +124,7 @@ export default function NewCreativePage() {
     };
 
     fetchDefaults();
-  }, [setValue]);
+  }, [reset]);
 
   // 🚀 NOVO: Submissão que suporta ambos os modos
   const onSubmit = async (data: CreateCreativeData) => {
@@ -182,6 +205,18 @@ export default function NewCreativePage() {
     reset(defaultCreativeValues);
     toast.info("Formulário limpo");
   };
+
+  // Renderiza um estado de carregamento enquanto busca os padrões
+  if (isFetchingDefaults) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 border-4 border-brand-neon-green/20 border-t-brand-neon-green rounded-full animate-spin"></div>
+          <p className="text-brand-neon-green text-lg font-medium">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 lg:p-6">
@@ -786,7 +821,11 @@ export default function NewCreativePage() {
                                 <FormLabel className="text-white font-medium text-sm">
                                   Fundo
                                 </FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  defaultValue={userDefaults?.background}
+                                >
                                   <FormControl>
                                     <SelectTrigger className="input-glass h-10">
                                       <SelectValue placeholder="Selecione o fundo" />
@@ -825,7 +864,11 @@ export default function NewCreativePage() {
                                  <FormLabel className="text-white font-medium text-sm">
                                    Qualidade
                                  </FormLabel>
-                                 <Select onValueChange={field.onChange} value={field.value}>
+                                 <Select
+                                   onValueChange={field.onChange}
+                                   value={field.value}
+                                   defaultValue={userDefaults?.quality}
+                                 >
                                    <FormControl>
                                      <SelectTrigger className="input-glass h-10">
                                        <SelectValue placeholder="Selecione a qualidade" />
@@ -862,7 +905,11 @@ export default function NewCreativePage() {
                                 <FormLabel className="text-white font-medium text-sm">
                                   Formato de Saída
                                 </FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                  defaultValue={userDefaults?.output_format}
+                                >
                                   <FormControl>
                                     <SelectTrigger className="input-glass h-10">
                                       <SelectValue placeholder="Formato" />
